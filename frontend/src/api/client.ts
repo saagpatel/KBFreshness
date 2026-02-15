@@ -2,21 +2,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Article, ArticleDetail, ArticleListResponse, ScanRun, LinkCheck, Screenshot } from '../types';
 
 // Validate and normalize API base URL
-function getApiBase(): string {
-  const envUrl = import.meta.env.VITE_API_URL;
-
+export function normalizeApiBase(envUrl: string | undefined, origin: string): string {
   if (!envUrl) {
     return '/api';
   }
 
   // Validate URL format
   try {
-    const url = new URL(envUrl, window.location.origin);
+    const url = new URL(envUrl, origin);
     // Return path only for relative URLs, full URL for absolute
     return envUrl.startsWith('http') ? envUrl : url.pathname;
   } catch (e) {
     throw new Error(`Invalid VITE_API_URL format: ${envUrl}. Must be a valid URL or path.`);
   }
+}
+
+function getApiBase(): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+  return normalizeApiBase(import.meta.env.VITE_API_URL, origin);
 }
 
 const API_BASE = getApiBase();
@@ -166,6 +169,5 @@ export function useArticleScreenshots(articleId: string) {
 }
 
 export function getScreenshotImageUrl(screenshotId: string): string {
-  const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
   return `${API_BASE}/screenshots/${screenshotId}/image`;
 }

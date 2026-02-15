@@ -174,9 +174,7 @@ impl ConfluenceClient {
     fn parse_page(&self, page_json: ConfluencePageJson) -> Result<ConfluencePage, AppError> {
         // Parse the ISO 8601 timestamp from Confluence
         let last_modified_at = DateTime::parse_from_rfc3339(&page_json.version.when)
-            .map_err(|e| {
-                AppError::Internal(format!("Failed to parse Confluence date: {}", e))
-            })?
+            .map_err(|e| AppError::Internal(format!("Failed to parse Confluence date: {}", e)))?
             .with_timezone(&Utc);
 
         let body_storage_format = page_json

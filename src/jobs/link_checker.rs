@@ -1,4 +1,5 @@
 use crate::error::AppError;
+use crate::security::validate_outbound_url;
 use scraper::{Html, Selector};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -60,15 +61,23 @@ pub fn extract_links(xhtml_body: &str, base_url: &str) -> Vec<String> {
 }
 
 /// Check multiple links concurrently
-pub async fn check_links(
-    urls: Vec<String>,
-    client: &reqwest::Client,
-) -> Vec<LinkCheckResult> {
+pub async fn check_links(urls: Vec<String>, client: &reqwest::Client) -> Vec<LinkCheckResult> {
     let max_concurrent = get_max_concurrent_requests();
     let semaphore = Arc::new(Semaphore::new(max_concurrent));
     let mut handles = Vec::new();
+    let mut results = Vec::new();
 
     for url in urls {
+        if let Err(reason) = validate_outbound_url(&url) {
+            results.push(LinkCheckResult {
+                url,
+                status_code: None,
+                is_broken: true,
+                error_message: Some(format!("Blocked unsafe URL target: {}", reason)),
+            });
+            continue;
+        }
+
         let permit = match semaphore.clone().acquire_owned().await {
             Ok(permit) => permit,
             Err(e) => {
@@ -79,14 +88,16 @@ pub async fn check_links(
         let client = client.clone();
         let url_clone = url.clone();
 
-        handles.push((url, tokio::spawn(async move {
-            let result = check_single_link(&url_clone, &client).await;
-            drop(permit);
-            result
-        })));
+        handles.push((
+            url,
+            tokio::spawn(async move {
+                let result = check_single_link(&url_clone, &client).await;
+                drop(permit);
+                result
+            }),
+        ));
     }
 
-    let mut results = Vec::new();
     for (url, handle) in handles {
         match handle.await {
             Ok(result) => results.push(result),
@@ -110,12 +121,7 @@ async fn check_single_link(url: &str, client: &reqwest::Client) -> LinkCheckResu
     tracing::debug!("Checking link: {}", url);
 
     // Try HEAD request first (faster)
-    match client
-        .head(url)
-        .timeout(REQUEST_TIMEOUT)
-        .send()
-        .await
-    {
+    match client.head(url).timeout(REQUEST_TIMEOUT).send().await {
         Ok(response) => {
             let status = response.status().as_u16() as i32;
 
@@ -155,12 +161,7 @@ async fn check_single_link(url: &str, client: &reqwest::Client) -> LinkCheckResu
 }
 
 async fn check_with_get(url: &str, client: &reqwest::Client) -> LinkCheckResult {
-    match client
-        .get(url)
-        .timeout(REQUEST_TIMEOUT)
-        .send()
-        .await
-    {
+    match client.get(url).timeout(REQUEST_TIMEOUT).send().await {
         Ok(response) => {
             let status = response.status().as_u16() as i32;
             // Link is broken if it's neither success nor redirect
@@ -258,5 +259,19 @@ mod tests {
 
         let links = extract_links(xhtml, "https://base.com");
         assert_eq!(links.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_check_links_blocks_private_targets() {
+        let client = reqwest::Client::new();
+        let results = check_links(vec!["http://127.0.0.1:8080".to_string()], &client).await;
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].is_broken);
+        assert!(results[0]
+            .error_message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Blocked unsafe URL target"));
     }
 }

@@ -71,7 +71,9 @@ async fn list_articles(
         return Err(AppError::BadRequest("page must be >= 1".into()));
     }
     if query.limit < 1 || query.limit > 100 {
-        return Err(AppError::BadRequest("limit must be between 1 and 100".into()));
+        return Err(AppError::BadRequest(
+            "limit must be between 1 and 100".into(),
+        ));
     }
 
     let (articles_list, total) = articles::list_articles_with_health(
@@ -123,7 +125,8 @@ async fn review_article(
     Path(id): Path<Uuid>,
     Json(payload): Json<ReviewRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    articles::mark_reviewed(&state.db, id, &payload.reviewed_by).await?;
+    let reviewed_by = validate_reviewer_name(&payload.reviewed_by)?;
+    articles::mark_reviewed(&state.db, id, &reviewed_by).await?;
     let article = articles::get_article_by_id(&state.db, id).await?;
     Ok(Json(article))
 }
@@ -194,4 +197,51 @@ async fn get_article_stats(
         yellow,
         red,
     }))
+}
+
+fn validate_reviewer_name(name: &str) -> Result<String, AppError> {
+    let trimmed = name.trim();
+
+    if trimmed.is_empty() {
+        return Err(AppError::BadRequest("reviewed_by cannot be empty".into()));
+    }
+
+    if trimmed.len() > 100 {
+        return Err(AppError::BadRequest(
+            "reviewed_by must be 100 characters or less".into(),
+        ));
+    }
+
+    let is_valid = trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == ' ' || c == '-' || c == '_' || c == '.');
+
+    if !is_valid {
+        return Err(AppError::BadRequest(
+            "reviewed_by contains invalid characters".into(),
+        ));
+    }
+
+    Ok(trimmed.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_reviewer_name;
+
+    #[test]
+    fn validate_reviewer_name_accepts_expected_values() {
+        assert_eq!(
+            validate_reviewer_name("  Jane-Doe_1  ").unwrap(),
+            "Jane-Doe_1"
+        );
+        assert_eq!(validate_reviewer_name("A.B").unwrap(), "A.B");
+    }
+
+    #[test]
+    fn validate_reviewer_name_rejects_invalid_values() {
+        assert!(validate_reviewer_name("   ").is_err());
+        assert!(validate_reviewer_name("name!").is_err());
+        assert!(validate_reviewer_name(&"a".repeat(101)).is_err());
+    }
 }

@@ -33,7 +33,10 @@ pub async fn get_for_article(pool: &PgPool, article_id: Uuid) -> Result<Vec<Link
 }
 
 /// Get only broken links for an article
-pub async fn get_broken_for_article(pool: &PgPool, article_id: Uuid) -> Result<Vec<LinkCheck>, AppError> {
+pub async fn get_broken_for_article(
+    pool: &PgPool,
+    article_id: Uuid,
+) -> Result<Vec<LinkCheck>, AppError> {
     let links = sqlx::query_as::<_, LinkCheck>(
         r#"
         SELECT DISTINCT ON (url) id, article_id, url, status_code, is_broken, error_message, checked_at

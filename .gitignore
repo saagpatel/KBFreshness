@@ -21,3 +21,6 @@ Cargo.lock
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# Local audit workspace
+.codex_audit/

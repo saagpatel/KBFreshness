@@ -15,14 +15,10 @@ pub fn create_router(state: AppState) -> Router {
         .unwrap_or_else(|_| "http://localhost:5173".to_string());
 
     let cors = CorsLayer::new()
-        .allow_origin(
-            cors_origin
-                .parse::<HeaderValue>()
-                .unwrap_or_else(|_| {
-                    tracing::warn!("Invalid CORS_ALLOWED_ORIGIN, falling back to default");
-                    "http://localhost:5173".parse().unwrap()
-                })
-        )
+        .allow_origin(cors_origin.parse::<HeaderValue>().unwrap_or_else(|_| {
+            tracing::warn!("Invalid CORS_ALLOWED_ORIGIN, falling back to default");
+            "http://localhost:5173".parse().unwrap()
+        }))
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers(tower_http::cors::Any);
 

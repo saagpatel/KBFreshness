@@ -41,11 +41,17 @@ impl IntoResponse for AppError {
             }
             AppError::ExternalApi(e) => {
                 tracing::error!("External API error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "External service error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "External service error".into(),
+                )
             }
             AppError::Browser(msg) => {
                 tracing::error!("Browser error: {}", msg);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Browser automation error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Browser automation error".into(),
+                )
             }
             AppError::Internal(msg) => {
                 tracing::error!("Internal error: {}", msg);

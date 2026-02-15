@@ -4,6 +4,7 @@ use crate::error::AppError;
 use crate::jobs::link_checker;
 use crate::sources::confluence::ConfluenceClient;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[cfg(feature = "screenshots")]
 use crate::jobs::screenshot_capture;
@@ -19,9 +20,19 @@ pub struct ScanStats {
 pub async fn run_full_scan(pool: &PgPool, config: &Config) -> Result<ScanStats, AppError> {
     tracing::info!("Starting full freshness scan");
 
-    // Create scan run record
-    let scan_id = scan_runs::create_run(pool, "full").await?;
+    // Atomically reserve a running scan slot.
+    let scan_id = scan_runs::try_create_run(pool, "full")
+        .await?
+        .ok_or_else(|| AppError::Conflict("A scan is already in progress".into()))?;
 
+    run_full_scan_with_run_id(pool, config, scan_id).await
+}
+
+pub async fn run_full_scan_with_run_id(
+    pool: &PgPool,
+    config: &Config,
+    scan_id: Uuid,
+) -> Result<ScanStats, AppError> {
     match run_scan_inner(pool, config).await {
         Ok(stats) => {
             scan_runs::complete_run(
@@ -64,11 +75,7 @@ async fn run_scan_inner(pool: &PgPool, config: &Config) -> Result<ScanStats, App
     ) {
         tracing::info!("Syncing articles from Confluence");
 
-        let client = ConfluenceClient::new(
-            base_url.clone(),
-            email.clone(),
-            token.clone(),
-        );
+        let client = ConfluenceClient::new(base_url.clone(), email.clone(), token.clone());
 
         // Space key is required when Confluence is configured
         let space_key = match std::env::var("CONFLUENCE_SPACE_KEY") {
@@ -123,7 +130,11 @@ async fn run_scan_inner(pool: &PgPool, config: &Config) -> Result<ScanStats, App
                 link_checker::store_link_results(pool, article_id, results).await?;
 
                 if broken_count > 0 {
-                    tracing::warn!("Found {} broken links in article: {}", broken_count, page.title);
+                    tracing::warn!(
+                        "Found {} broken links in article: {}",
+                        broken_count,
+                        page.title
+                    );
                 }
             }
         }
@@ -151,16 +162,9 @@ pub async fn run_screenshot_scan(pool: &PgPool) -> Result<i32, AppError> {
 
     // Paginate through all articles
     loop {
-        let (articles, total) = articles::list_articles_with_health(
-            pool,
-            None,
-            None,
-            "age",
-            "desc",
-            page,
-            page_size,
-        )
-        .await?;
+        let (articles, total) =
+            articles::list_articles_with_health(pool, None, None, "age", "desc", page, page_size)
+                .await?;
 
         if articles.is_empty() {
             break;
@@ -177,13 +181,8 @@ pub async fn run_screenshot_scan(pool: &PgPool) -> Result<i32, AppError> {
                     let hash = screenshot_capture::ScreenshotJob::calculate_hash(&image_bytes)?;
 
                     // Store screenshot
-                    screenshot_capture::store_screenshot(
-                        pool,
-                        article.id,
-                        image_bytes,
-                        hash,
-                    )
-                    .await?;
+                    screenshot_capture::store_screenshot(pool, article.id, image_bytes, hash)
+                        .await?;
 
                     captured += 1;
                     tracing::info!("Screenshot captured for: {}", article.title);

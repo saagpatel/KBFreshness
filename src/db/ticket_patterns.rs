@@ -70,7 +70,7 @@ pub async fn get_for_article(
 pub async fn cleanup_old_patterns(pool: &PgPool) -> Result<u64, AppError> {
     let result = sqlx::query(
         "DELETE FROM ticket_patterns
-         WHERE detected_at < NOW() - INTERVAL '90 days'"
+         WHERE detected_at < NOW() - INTERVAL '90 days'",
     )
     .execute(pool)
     .await?;
@@ -80,12 +80,10 @@ pub async fn cleanup_old_patterns(pool: &PgPool) -> Result<u64, AppError> {
 
 /// Clear existing patterns for an article (before inserting new ones)
 pub async fn clear_for_article(pool: &PgPool, article_id: Uuid) -> Result<u64, AppError> {
-    let result = sqlx::query(
-        "DELETE FROM ticket_patterns WHERE related_article_id = $1"
-    )
-    .bind(article_id)
-    .execute(pool)
-    .await?;
+    let result = sqlx::query("DELETE FROM ticket_patterns WHERE related_article_id = $1")
+        .bind(article_id)
+        .execute(pool)
+        .await?;
 
     Ok(result.rows_affected())
 }
