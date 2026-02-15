@@ -3,6 +3,7 @@ use crate::health::{compute_health, HealthStatus};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
+use sqlx::{FromRow, Row};
 use uuid::Uuid;
 
 const DEFAULT_FRESHNESS_THRESHOLD_DAYS: i64 = 90;
@@ -28,12 +29,21 @@ pub struct ArticleWithHealth {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(sqlx::Type, Serialize, Clone, Debug)]
-#[sqlx(type_name = "source_type", rename_all = "lowercase")]
+#[derive(Serialize, Clone, Debug)]
 pub enum SourceType {
     Confluence,
     Notion,
     Url,
+}
+
+impl SourceType {
+    fn as_db_str(&self) -> &'static str {
+        match self {
+            SourceType::Confluence => "confluence",
+            SourceType::Notion => "notion",
+            SourceType::Url => "url",
+        }
+    }
 }
 
 pub struct InsertArticle {
@@ -50,11 +60,11 @@ pub struct InsertArticle {
 /// Insert a new article
 pub async fn insert_article(pool: &PgPool, article: InsertArticle) -> Result<Uuid, AppError> {
     let row: (Uuid,) = sqlx::query_as(
-        "INSERT INTO articles (title, url, source, source_id, space_key, last_modified_at, last_modified_by, version_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+        "INSERT INTO articles (title, url, source, source_id, space_key, last_modified_at, last_modified_by, version_number) VALUES ($1, $2, $3::source_type, $4, $5, $6, $7, $8) RETURNING id"
     )
     .bind(&article.title)
     .bind(&article.url)
-    .bind(&article.source)
+    .bind(article.source.as_db_str())
     .bind(&article.source_id)
     .bind(&article.space_key)
     .bind(article.last_modified_at)
@@ -71,12 +81,13 @@ pub async fn insert_article(pool: &PgPool, article: InsertArticle) -> Result<Uui
 pub async fn upsert_from_source(pool: &PgPool, article: InsertArticle) -> Result<Uuid, AppError> {
     // Try to find existing article by source_id
     if let Some(source_id) = &article.source_id {
-        let existing: Option<(Uuid,)> =
-            sqlx::query_as("SELECT id FROM articles WHERE source_id = $1 AND source = $2")
-                .bind(source_id)
-                .bind(&article.source)
-                .fetch_optional(pool)
-                .await?;
+        let existing: Option<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM articles WHERE source_id = $1 AND source = $2::source_type",
+        )
+        .bind(source_id)
+        .bind(article.source.as_db_str())
+        .fetch_optional(pool)
+        .await?;
 
         if let Some((id,)) = existing {
             // Update existing article (preserve reviewed_at)
@@ -154,7 +165,7 @@ pub async fn list_articles_with_health(
             a.id,
             a.title,
             a.url,
-            a.source as "source: SourceType",
+            a.source::text as source,
             a.source_id,
             a.space_key,
             a.last_modified_at,
@@ -192,7 +203,7 @@ pub async fn list_articles_with_health(
     if let Some(filter_health) = filter_health {
         // Health is computed from dynamic fields, so apply filter after row mapping,
         // then paginate in memory for correctness.
-        let rows = sqlx::query_as::<_, ArticleRow>(&base_query)
+        let rows = sqlx::query_as::<ArticleRow>(&base_query)
             .bind(space_filter)
             .fetch_all(pool)
             .await?;
@@ -227,7 +238,7 @@ pub async fn list_articles_with_health(
         let total = total.0;
 
         let paginated_query = format!("{} LIMIT $2 OFFSET $3", base_query);
-        let rows = sqlx::query_as::<_, ArticleRow>(&paginated_query)
+        let rows = sqlx::query_as::<ArticleRow>(&paginated_query)
             .bind(space_filter)
             .bind(limit)
             .bind(offset)
@@ -245,13 +256,13 @@ pub async fn list_articles_with_health(
 
 /// Get article by ID with health status
 pub async fn get_article_by_id(pool: &PgPool, id: Uuid) -> Result<ArticleWithHealth, AppError> {
-    let row = sqlx::query_as::<_, ArticleRow>(
+    let row = sqlx::query_as::<ArticleRow>(
         r#"
         SELECT
             a.id,
             a.title,
             a.url,
-            a.source as "source: SourceType",
+            a.source::text as source,
             a.source_id,
             a.space_key,
             a.last_modified_at,
@@ -321,7 +332,7 @@ fn map_article_row(row: ArticleRow, now: &DateTime<Utc>) -> ArticleWithHealth {
         id: row.id,
         title: row.title,
         url: row.url,
-        source: format!("{:?}", row.source).to_lowercase(),
+        source: row.source,
         source_id: row.source_id,
         space_key: row.space_key,
         last_modified_at: row.last_modified_at,
@@ -389,12 +400,11 @@ pub async fn set_manual_flag(pool: &PgPool, id: Uuid, flagged: bool) -> Result<(
     Ok(())
 }
 
-#[derive(sqlx::FromRow)]
 struct ArticleRow {
     id: Uuid,
     title: String,
     url: String,
-    source: SourceType,
+    source: String,
     source_id: Option<String>,
     space_key: Option<String>,
     last_modified_at: DateTime<Utc>,
@@ -407,4 +417,27 @@ struct ArticleRow {
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     broken_count: Option<i64>,
+}
+
+impl<'r> FromRow<'r, sqlx::postgres::PgRow> for ArticleRow {
+    fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            title: row.try_get("title")?,
+            url: row.try_get("url")?,
+            source: row.try_get("source")?,
+            source_id: row.try_get("source_id")?,
+            space_key: row.try_get("space_key")?,
+            last_modified_at: row.try_get("last_modified_at")?,
+            last_modified_by: row.try_get("last_modified_by")?,
+            version_number: row.try_get("version_number")?,
+            freshness_threshold_days: row.try_get("freshness_threshold_days")?,
+            manually_flagged: row.try_get("manually_flagged")?,
+            reviewed_at: row.try_get("reviewed_at")?,
+            reviewed_by: row.try_get("reviewed_by")?,
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+            broken_count: row.try_get("broken_count")?,
+        })
+    }
 }

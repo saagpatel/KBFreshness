@@ -3,6 +3,7 @@ use crate::error::AppError;
 use crate::security::validate_outbound_url;
 use chrono::Utc;
 use sqlx::PgPool;
+use sqlx::{FromRow, Row};
 use uuid::Uuid;
 
 #[cfg(feature = "screenshots")]
@@ -166,7 +167,7 @@ pub async fn get_latest_screenshot(
     pool: &PgPool,
     article_id: Uuid,
 ) -> Result<Option<Screenshot>, AppError> {
-    let screenshot = sqlx::query_as::<_, Screenshot>(
+    let screenshot = sqlx::query_as::<Screenshot>(
         "SELECT id, article_id, perceptual_hash, captured_at
          FROM screenshots
          WHERE article_id = $1
@@ -185,7 +186,7 @@ pub async fn get_screenshot_timeline(
     pool: &PgPool,
     article_id: Uuid,
 ) -> Result<Vec<Screenshot>, AppError> {
-    let screenshots = sqlx::query_as::<_, Screenshot>(
+    let screenshots = sqlx::query_as::<Screenshot>(
         "SELECT id, article_id, perceptual_hash, captured_at
          FROM screenshots
          WHERE article_id = $1
@@ -213,12 +214,23 @@ pub async fn get_screenshot_image(
     Ok(row.map(|r| r.0))
 }
 
-#[derive(sqlx::FromRow, serde::Serialize)]
+#[derive(serde::Serialize)]
 pub struct Screenshot {
     pub id: Uuid,
     pub article_id: Uuid,
     pub perceptual_hash: Option<String>,
     pub captured_at: chrono::DateTime<Utc>,
+}
+
+impl<'r> FromRow<'r, sqlx::postgres::PgRow> for Screenshot {
+    fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            article_id: row.try_get("article_id")?,
+            perceptual_hash: row.try_get("perceptual_hash")?,
+            captured_at: row.try_get("captured_at")?,
+        })
+    }
 }
 
 #[cfg(feature = "screenshots")]

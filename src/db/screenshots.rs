@@ -2,14 +2,26 @@ use crate::error::AppError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
+use sqlx::{FromRow, Row};
 use uuid::Uuid;
 
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Serialize)]
 pub struct Screenshot {
     pub id: Uuid,
     pub article_id: Uuid,
     pub perceptual_hash: Option<String>,
     pub captured_at: DateTime<Utc>,
+}
+
+impl<'r> FromRow<'r, sqlx::postgres::PgRow> for Screenshot {
+    fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            article_id: row.try_get("article_id")?,
+            perceptual_hash: row.try_get("perceptual_hash")?,
+            captured_at: row.try_get("captured_at")?,
+        })
+    }
 }
 
 #[derive(Serialize)]
@@ -28,7 +40,7 @@ pub async fn get_timeline_with_drift(
     article_id: Uuid,
     drift_threshold: u32,
 ) -> Result<Vec<ScreenshotWithDrift>, AppError> {
-    let screenshots = sqlx::query_as::<_, Screenshot>(
+    let screenshots = sqlx::query_as::<Screenshot>(
         "SELECT id, article_id, perceptual_hash, captured_at
          FROM screenshots
          WHERE article_id = $1

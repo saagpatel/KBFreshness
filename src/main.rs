@@ -1,3 +1,5 @@
+extern crate self as sqlx;
+
 mod api;
 mod config;
 mod db;
@@ -6,6 +8,9 @@ mod health;
 mod jobs;
 mod security;
 mod sources;
+mod sqlx_compat;
+
+pub use sqlx_compat::{migrate, postgres, query, query_as, Error, FromRow, PgPool, Row};
 
 use config::{create_pool, AppState, Config};
 use tokio_cron_scheduler::{Job, JobScheduler};
@@ -37,7 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run migrations
     tracing::info!("Running database migrations...");
-    sqlx::migrate!()
+    sqlx::migrate::Migrator::new(std::path::Path::new("./migrations"))
+        .await
+        .map_err(|e| format!("Failed to initialize migrations: {}", e))?
         .run(&pool)
         .await
         .map_err(|e| format!("Failed to run migrations: {}", e))?;

@@ -2,9 +2,10 @@ use crate::error::AppError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
+use sqlx::{FromRow, Row};
 use uuid::Uuid;
 
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Serialize)]
 pub struct ScanRun {
     pub id: Uuid,
     pub scan_type: String,
@@ -15,6 +16,22 @@ pub struct ScanRun {
     pub broken_links_found: i32,
     pub status: String,
     pub error_message: Option<String>,
+}
+
+impl<'r> FromRow<'r, sqlx::postgres::PgRow> for ScanRun {
+    fn from_row(row: &'r sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            scan_type: row.try_get("scan_type")?,
+            started_at: row.try_get("started_at")?,
+            completed_at: row.try_get("completed_at")?,
+            articles_scanned: row.try_get("articles_scanned")?,
+            links_checked: row.try_get("links_checked")?,
+            broken_links_found: row.try_get("broken_links_found")?,
+            status: row.try_get("status")?,
+            error_message: row.try_get("error_message")?,
+        })
+    }
 }
 
 /// Try to create a running scan record atomically.
@@ -71,7 +88,7 @@ pub async fn fail_run(pool: &PgPool, id: Uuid, error_message: &str) -> Result<()
 
 /// List recent scan runs
 pub async fn list_recent(pool: &PgPool, limit: i64) -> Result<Vec<ScanRun>, AppError> {
-    let runs = sqlx::query_as::<_, ScanRun>(
+    let runs = sqlx::query_as::<ScanRun>(
         "SELECT id, scan_type, started_at, completed_at, articles_scanned, links_checked, broken_links_found, status, error_message FROM scan_runs ORDER BY started_at DESC LIMIT $1"
     )
     .bind(limit)
