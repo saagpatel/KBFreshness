@@ -68,19 +68,15 @@ pub async fn insert_article(pool: &PgPool, article: InsertArticle) -> Result<Uui
 
 /// Upsert article from external source (Confluence/Notion)
 /// Updates if source_id exists, inserts otherwise
-pub async fn upsert_from_source(
-    pool: &PgPool,
-    article: InsertArticle,
-) -> Result<Uuid, AppError> {
+pub async fn upsert_from_source(pool: &PgPool, article: InsertArticle) -> Result<Uuid, AppError> {
     // Try to find existing article by source_id
     if let Some(source_id) = &article.source_id {
-        let existing: Option<(Uuid,)> = sqlx::query_as(
-            "SELECT id FROM articles WHERE source_id = $1 AND source = $2"
-        )
-        .bind(source_id)
-        .bind(&article.source)
-        .fetch_optional(pool)
-        .await?;
+        let existing: Option<(Uuid,)> =
+            sqlx::query_as("SELECT id FROM articles WHERE source_id = $1 AND source = $2")
+                .bind(source_id)
+                .bind(&article.source)
+                .fetch_optional(pool)
+                .await?;
 
         if let Some((id,)) = existing {
             // Update existing article (preserve reviewed_at)
@@ -88,7 +84,7 @@ pub async fn upsert_from_source(
                 "UPDATE articles
                  SET title = $1, url = $2, space_key = $3, last_modified_at = $4,
                      last_modified_by = $5, version_number = $6, updated_at = NOW()
-                 WHERE id = $7"
+                 WHERE id = $7",
             )
             .bind(&article.title)
             .bind(&article.url)
@@ -118,32 +114,41 @@ pub async fn list_articles_with_health(
     page: i64,
     limit: i64,
 ) -> Result<(Vec<ArticleWithHealth>, i64), AppError> {
-    let offset = (page - 1) * limit;
-
-    // Get total count first
-    let total: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM articles WHERE ($1::TEXT IS NULL OR space_key = $1)"
-    )
-    .bind(space_filter)
-    .fetch_one(pool)
-    .await?;
-    let total = total.0;
+    if page < 1 {
+        return Err(AppError::BadRequest("page must be >= 1".into()));
+    }
+    if limit < 1 {
+        return Err(AppError::BadRequest("limit must be >= 1".into()));
+    }
 
     // Validate and whitelist sort_by parameter
     let order_by = match sort_by {
         "age" => "last_modified_at",
         "title" => "title",
-        _ => return Err(AppError::BadRequest(format!("Invalid sort_by parameter: {}", sort_by))),
+        _ => {
+            return Err(AppError::BadRequest(format!(
+                "Invalid sort_by parameter: {}",
+                sort_by
+            )))
+        }
     };
 
     // Validate and whitelist direction parameter
     let direction = match sort_order.to_lowercase().as_str() {
         "asc" => "ASC",
         "desc" => "DESC",
-        _ => return Err(AppError::BadRequest(format!("Invalid sort_order parameter: {}", sort_order))),
+        _ => {
+            return Err(AppError::BadRequest(format!(
+                "Invalid sort_order parameter: {}",
+                sort_order
+            )))
+        }
     };
 
-    let query = format!(
+    let filter_health = parse_health_filter(health_filter)?;
+    let offset = (page - 1) * limit;
+
+    let base_query = format!(
         r#"
         SELECT
             a.id,
@@ -165,77 +170,77 @@ pub async fn list_articles_with_health(
         FROM articles a
         LEFT JOIN (
             SELECT article_id, COUNT(*) as broken_count
-            FROM link_checks
+            FROM (
+                SELECT DISTINCT ON (article_id, url)
+                    article_id,
+                    url,
+                    is_broken
+                FROM link_checks
+                ORDER BY article_id, url, checked_at DESC
+            ) latest_checks
             WHERE is_broken = TRUE
             GROUP BY article_id
         ) lc ON a.id = lc.article_id
         WHERE ($1::TEXT IS NULL OR a.space_key = $1)
         ORDER BY {} {}
-        LIMIT $2 OFFSET $3
         "#,
         order_by, direction
     );
 
-    let rows = sqlx::query_as::<_, ArticleRow>(&query)
-        .bind(space_filter)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
-
     let now = Utc::now();
-    let mut articles: Vec<ArticleWithHealth> = rows
-        .into_iter()
-        .map(|row| {
-            let threshold = row.freshness_threshold_days.unwrap_or(DEFAULT_FRESHNESS_THRESHOLD_DAYS);
-            let effective_date = row.reviewed_at.unwrap_or(row.last_modified_at);
-            let effective_age_days = (now - effective_date).num_days().max(0);
 
-            let broken_count = row.broken_count.unwrap_or(0);
-            let health = compute_health(
-                effective_age_days,
-                broken_count,
-                threshold,
-                row.manually_flagged,
-            );
+    if let Some(filter_health) = filter_health {
+        // Health is computed from dynamic fields, so apply filter after row mapping,
+        // then paginate in memory for correctness.
+        let rows = sqlx::query_as::<_, ArticleRow>(&base_query)
+            .bind(space_filter)
+            .fetch_all(pool)
+            .await?;
 
-            ArticleWithHealth {
-                id: row.id,
-                title: row.title,
-                url: row.url,
-                source: format!("{:?}", row.source).to_lowercase(),
-                source_id: row.source_id,
-                space_key: row.space_key,
-                last_modified_at: row.last_modified_at,
-                last_modified_by: row.last_modified_by,
-                version_number: row.version_number,
-                effective_age_days,
-                broken_link_count: broken_count,
-                health,
-                manually_flagged: row.manually_flagged,
-                reviewed_at: row.reviewed_at,
-                reviewed_by: row.reviewed_by,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-            }
-        })
-        .collect();
+        let filtered: Vec<ArticleWithHealth> = rows
+            .into_iter()
+            .map(|row| map_article_row(row, &now))
+            .filter(|article| article.health == filter_health)
+            .collect();
 
-    // Apply health filter post-query (since it's computed)
-    let filtered_total = if let Some(health_str) = health_filter {
-        let filter_health = match health_str.to_lowercase().as_str() {
-            "green" => HealthStatus::Green,
-            "yellow" => HealthStatus::Yellow,
-            "red" => HealthStatus::Red,
-            _ => return Err(AppError::BadRequest("Invalid health filter".into())),
-        };
-        articles.retain(|a| a.health == filter_health);
-        articles.len() as i64
+        let filtered_total = filtered.len() as i64;
+        let page_start = offset as usize;
+
+        if page_start >= filtered.len() {
+            return Ok((Vec::new(), filtered_total));
+        }
+
+        let page_items = filtered
+            .into_iter()
+            .skip(page_start)
+            .take(limit as usize)
+            .collect();
+
+        Ok((page_items, filtered_total))
     } else {
-        total
-    };
+        let total: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM articles WHERE ($1::TEXT IS NULL OR space_key = $1)",
+        )
+        .bind(space_filter)
+        .fetch_one(pool)
+        .await?;
+        let total = total.0;
 
-    Ok((articles, filtered_total))
+        let paginated_query = format!("{} LIMIT $2 OFFSET $3", base_query);
+        let rows = sqlx::query_as::<_, ArticleRow>(&paginated_query)
+            .bind(space_filter)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(pool)
+            .await?;
+
+        let articles = rows
+            .into_iter()
+            .map(|row| map_article_row(row, &now))
+            .collect();
+
+        Ok((articles, total))
+    }
 }
 
 /// Get article by ID with health status
@@ -262,7 +267,14 @@ pub async fn get_article_by_id(pool: &PgPool, id: Uuid) -> Result<ArticleWithHea
         FROM articles a
         LEFT JOIN (
             SELECT article_id, COUNT(*) as broken_count
-            FROM link_checks
+            FROM (
+                SELECT DISTINCT ON (article_id, url)
+                    article_id,
+                    url,
+                    is_broken
+                FROM link_checks
+                ORDER BY article_id, url, checked_at DESC
+            ) latest_checks
             WHERE is_broken = TRUE
             GROUP BY article_id
         ) lc ON a.id = lc.article_id
@@ -275,9 +287,27 @@ pub async fn get_article_by_id(pool: &PgPool, id: Uuid) -> Result<ArticleWithHea
     .ok_or_else(|| AppError::NotFound(format!("article with id {}", id)))?;
 
     let now = Utc::now();
-    let threshold = row.freshness_threshold_days.unwrap_or(DEFAULT_FRESHNESS_THRESHOLD_DAYS);
+    Ok(map_article_row(row, &now))
+}
+
+fn parse_health_filter(health_filter: Option<&str>) -> Result<Option<HealthStatus>, AppError> {
+    match health_filter.map(|h| h.to_lowercase()) {
+        None => Ok(None),
+        Some(value) => match value.as_str() {
+            "green" => Ok(Some(HealthStatus::Green)),
+            "yellow" => Ok(Some(HealthStatus::Yellow)),
+            "red" => Ok(Some(HealthStatus::Red)),
+            _ => Err(AppError::BadRequest("Invalid health filter".into())),
+        },
+    }
+}
+
+fn map_article_row(row: ArticleRow, now: &DateTime<Utc>) -> ArticleWithHealth {
+    let threshold = row
+        .freshness_threshold_days
+        .unwrap_or(DEFAULT_FRESHNESS_THRESHOLD_DAYS);
     let effective_date = row.reviewed_at.unwrap_or(row.last_modified_at);
-    let effective_age_days = (now - effective_date).num_days().max(0);
+    let effective_age_days = (*now - effective_date).num_days().max(0);
     let broken_count = row.broken_count.unwrap_or(0);
 
     let health = compute_health(
@@ -287,7 +317,7 @@ pub async fn get_article_by_id(pool: &PgPool, id: Uuid) -> Result<ArticleWithHea
         row.manually_flagged,
     );
 
-    Ok(ArticleWithHealth {
+    ArticleWithHealth {
         id: row.id,
         title: row.title,
         url: row.url,
@@ -305,17 +335,31 @@ pub async fn get_article_by_id(pool: &PgPool, id: Uuid) -> Result<ArticleWithHea
         reviewed_by: row.reviewed_by,
         created_at: row.created_at,
         updated_at: row.updated_at,
-    })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_health_filter;
+
+    #[test]
+    fn parse_health_filter_accepts_supported_values_case_insensitive() {
+        assert!(parse_health_filter(Some("green")).unwrap().is_some());
+        assert!(parse_health_filter(Some("YELLOW")).unwrap().is_some());
+        assert!(parse_health_filter(Some("Red")).unwrap().is_some());
+        assert!(parse_health_filter(None).unwrap().is_none());
+    }
+
+    #[test]
+    fn parse_health_filter_rejects_unknown_values() {
+        assert!(parse_health_filter(Some("blue")).is_err());
+    }
 }
 
 /// Mark article as reviewed
-pub async fn mark_reviewed(
-    pool: &PgPool,
-    id: Uuid,
-    reviewed_by: &str,
-) -> Result<(), AppError> {
+pub async fn mark_reviewed(pool: &PgPool, id: Uuid, reviewed_by: &str) -> Result<(), AppError> {
     let result = sqlx::query(
-        "UPDATE articles SET reviewed_at = NOW(), reviewed_by = $1, updated_at = NOW() WHERE id = $2"
+        "UPDATE articles SET reviewed_at = NOW(), reviewed_by = $1, updated_at = NOW() WHERE id = $2",
     )
     .bind(reviewed_by)
     .bind(id)
@@ -331,13 +375,12 @@ pub async fn mark_reviewed(
 
 /// Set manual flag on article
 pub async fn set_manual_flag(pool: &PgPool, id: Uuid, flagged: bool) -> Result<(), AppError> {
-    let result = sqlx::query(
-        "UPDATE articles SET manually_flagged = $1, updated_at = NOW() WHERE id = $2"
-    )
-    .bind(flagged)
-    .bind(id)
-    .execute(pool)
-    .await?;
+    let result =
+        sqlx::query("UPDATE articles SET manually_flagged = $1, updated_at = NOW() WHERE id = $2")
+            .bind(flagged)
+            .bind(id)
+            .execute(pool)
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound(format!("article with id {}", id)));

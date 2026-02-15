@@ -41,20 +41,18 @@ async fn list_scans(
     Ok(Json(scans))
 }
 
-async fn trigger_scan(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, AppError> {
-    // Check if a scan is already running
-    if scan_runs::is_scan_running(&state.db).await? {
-        return Err(AppError::Conflict("A scan is already in progress".into()));
-    }
+async fn trigger_scan(State(state): State<AppState>) -> Result<Json<serde_json::Value>, AppError> {
+    // Atomically reserve a scan slot before spawning work.
+    let scan_id = scan_runs::try_create_run(&state.db, "full")
+        .await?
+        .ok_or_else(|| AppError::Conflict("A scan is already in progress".into()))?;
 
     // Spawn scan task in background
     let pool = state.db.clone();
     let config = state.config.clone();
 
     tokio::spawn(async move {
-        if let Err(e) = freshness_scan::run_full_scan(&pool, &config).await {
+        if let Err(e) = freshness_scan::run_full_scan_with_run_id(&pool, &config, scan_id).await {
             tracing::error!("Background scan failed: {}", e);
         }
     });

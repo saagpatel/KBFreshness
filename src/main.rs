@@ -4,6 +4,7 @@ mod db;
 mod error;
 mod health;
 mod jobs;
+mod security;
 mod sources;
 
 use config::{create_pool, AppState, Config};
@@ -24,8 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Starting KB Freshness Detector");
 
     // Load config
-    let config = Config::from_env()
-        .map_err(|e| format!("Failed to load configuration: {}", e))?;
+    let config = Config::from_env().map_err(|e| format!("Failed to load configuration: {}", e))?;
 
     // Create database pool
     tracing::info!("Connecting to database...");
@@ -107,6 +107,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     scheduler
         .add(Job::new_async("0 0 3 * * *", move |_uuid, _lock| {
             let pool = pool_clone.clone();
+            #[cfg(not(feature = "screenshots"))]
+            let _ = &pool;
             Box::pin(async move {
                 tracing::info!("Starting scheduled screenshot cleanup");
                 #[cfg(feature = "screenshots")]
@@ -173,8 +175,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = api::create_router(state);
 
     // Start server
-    let bind_address = std::env::var("BIND_ADDRESS")
-        .unwrap_or_else(|_| "127.0.0.1:3001".to_string());
+    let bind_address =
+        std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.1:3001".to_string());
 
     let listener = tokio::net::TcpListener::bind(&bind_address)
         .await

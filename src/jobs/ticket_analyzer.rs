@@ -122,20 +122,18 @@ pub struct Ticket {
 // Common English stopwords to filter out from ticket keywords
 const STOPWORDS: &[&str] = &[
     "the", "be", "to", "of", "and", "a", "in", "that", "have", "i", "it", "for", "not", "on",
-    "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we",
-    "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their",
-    "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when",
-    "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into",
-    "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now",
-    "look", "only", "come", "its", "over", "think", "also", "back", "after", "use", "two",
-    "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any",
-    "these", "give", "day", "most", "us", "is", "was", "are", "been", "has", "had", "were",
-    "said", "did", "having", "may", "should", "does", "am",
+    "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say",
+    "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so",
+    "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like",
+    "time", "no", "just", "him", "know", "take", "people", "into", "year", "your", "good", "some",
+    "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over",
+    "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way",
+    "even", "new", "want", "because", "any", "these", "give", "day", "most", "us", "is", "was",
+    "are", "been", "has", "had", "were", "said", "did", "having", "may", "should", "does", "am",
 ];
 
 /// Extract keywords from ticket summaries
 pub fn extract_keywords(tickets: &[Ticket]) -> HashMap<String, usize> {
-
     let mut keyword_counts = HashMap::new();
 
     for ticket in tickets {
@@ -390,18 +388,13 @@ pub async fn run_ticket_analysis(pool: &PgPool, config: &Config) -> Result<i32, 
     tracing::info!("Fetched {} tickets from Jira", tickets.len());
 
     // Get all articles
-    let (all_articles, _) = articles::list_articles_with_health(
-        pool, None, None, "age", "desc", 1, 1000,
-    )
-    .await?;
+    let (all_articles, _) =
+        articles::list_articles_with_health(pool, None, None, "age", "desc", 1, 1000).await?;
 
     // Correlate tickets with articles
     let correlations = correlate_with_articles(&tickets, &all_articles, 0.8);
 
-    tracing::info!(
-        "Found correlations for {} articles",
-        correlations.len()
-    );
+    tracing::info!("Found correlations for {} articles", correlations.len());
 
     // Create HTTP client for LLM requests (reused across all suggestions)
     let http_client = reqwest::Client::builder()
@@ -480,6 +473,9 @@ pub async fn run_ticket_analysis(pool: &PgPool, config: &Config) -> Result<i32, 
         );
     }
 
-    tracing::info!("Ticket analysis complete: {} patterns created", patterns_created);
+    tracing::info!(
+        "Ticket analysis complete: {} patterns created",
+        patterns_created
+    );
     Ok(patterns_created)
 }

@@ -1,3 +1,10 @@
+-- DEVELOPMENT ONLY
+-- This file is intentionally kept outside /migrations so production startup
+-- cannot load synthetic sample data.
+--
+-- Run manually when you want demo data in a local/dev database:
+--   psql "$DATABASE_URL" -f scripts/seed_dev_data.sql
+--
 -- Seed data for development: 3 sample articles (1 green, 1 yellow, 1 red)
 
 -- Green article: Fresh, no broken links

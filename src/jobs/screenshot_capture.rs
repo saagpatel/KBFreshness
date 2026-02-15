@@ -1,23 +1,25 @@
 use crate::error::AppError;
+#[cfg(feature = "screenshots")]
+use crate::security::validate_outbound_url;
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 #[cfg(feature = "screenshots")]
-use std::sync::Arc;
-#[cfg(feature = "screenshots")]
-use tokio::sync::Mutex;
+use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
 #[cfg(feature = "screenshots")]
 use chromiumoxide::{
     browser::{Browser, BrowserConfig},
     page::ScreenshotParams,
 };
 #[cfg(feature = "screenshots")]
-use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
-#[cfg(feature = "screenshots")]
 use futures::stream::StreamExt;
 #[cfg(feature = "screenshots")]
-use img_hash::{HasherConfig, ImageHash};
+use image::{imageops::FilterType, DynamicImage};
+#[cfg(feature = "screenshots")]
+use std::sync::Arc;
+#[cfg(feature = "screenshots")]
+use tokio::sync::Mutex;
 
 pub struct ScreenshotJob {
     #[cfg(feature = "screenshots")]
@@ -64,6 +66,13 @@ impl ScreenshotJob {
     /// Capture screenshot of a URL
     #[cfg(feature = "screenshots")]
     pub async fn capture_screenshot(&self, url: &str) -> Result<Vec<u8>, AppError> {
+        if let Err(reason) = validate_outbound_url(url) {
+            return Err(AppError::BadRequest(format!(
+                "Blocked unsafe screenshot URL: {}",
+                reason
+            )));
+        }
+
         tracing::debug!("Capturing screenshot of: {}", url);
 
         let browser = self.browser.lock().await;
@@ -103,15 +112,10 @@ impl ScreenshotJob {
     /// Calculate perceptual hash of image bytes
     #[cfg(feature = "screenshots")]
     pub fn calculate_hash(image_bytes: &[u8]) -> Result<String, AppError> {
-        use img_hash::image;
-
         let img = image::load_from_memory(image_bytes)
             .map_err(|e| AppError::Internal(format!("Failed to decode image: {}", e)))?;
 
-        let hasher = HasherConfig::new().to_hasher();
-        let hash = hasher.hash_image(&img);
-
-        Ok(hash.to_base64())
+        Ok(average_hash_8x8(&img))
     }
 
     #[cfg(not(feature = "screenshots"))]
@@ -122,12 +126,12 @@ impl ScreenshotJob {
     /// Compare two perceptual hashes and return similarity distance (0-64, lower = more similar)
     #[cfg(feature = "screenshots")]
     pub fn compare_hashes(hash1: &str, hash2: &str) -> Result<u32, AppError> {
-        let h1 = ImageHash::<[u8; 8]>::from_base64(hash1)
-            .map_err(|e| AppError::Internal(format!("Failed to parse hash1: {:?}", e)))?;
-        let h2 = ImageHash::<[u8; 8]>::from_base64(hash2)
-            .map_err(|e| AppError::Internal(format!("Failed to parse hash2: {:?}", e)))?;
+        let h1 = u64::from_str_radix(hash1, 16)
+            .map_err(|e| AppError::Internal(format!("Failed to parse hash1: {}", e)))?;
+        let h2 = u64::from_str_radix(hash2, 16)
+            .map_err(|e| AppError::Internal(format!("Failed to parse hash2: {}", e)))?;
 
-        Ok(h1.dist(&h2))
+        Ok((h1 ^ h2).count_ones())
     }
 
     #[cfg(not(feature = "screenshots"))]
@@ -146,7 +150,7 @@ pub async fn store_screenshot(
     let row: (Uuid,) = sqlx::query_as(
         "INSERT INTO screenshots (article_id, image_data, perceptual_hash, captured_at)
          VALUES ($1, $2, $3, NOW())
-         RETURNING id"
+         RETURNING id",
     )
     .bind(article_id)
     .bind(image_data)
@@ -167,7 +171,7 @@ pub async fn get_latest_screenshot(
          FROM screenshots
          WHERE article_id = $1
          ORDER BY captured_at DESC
-         LIMIT 1"
+         LIMIT 1",
     )
     .bind(article_id)
     .fetch_optional(pool)
@@ -186,7 +190,7 @@ pub async fn get_screenshot_timeline(
          FROM screenshots
          WHERE article_id = $1
          ORDER BY captured_at DESC
-         LIMIT 10"
+         LIMIT 10",
     )
     .bind(article_id)
     .fetch_all(pool)
@@ -200,12 +204,11 @@ pub async fn get_screenshot_image(
     pool: &PgPool,
     screenshot_id: Uuid,
 ) -> Result<Option<Vec<u8>>, AppError> {
-    let row: Option<(Vec<u8>,)> = sqlx::query_as(
-        "SELECT image_data FROM screenshots WHERE id = $1"
-    )
-    .bind(screenshot_id)
-    .fetch_optional(pool)
-    .await?;
+    let row: Option<(Vec<u8>,)> =
+        sqlx::query_as("SELECT image_data FROM screenshots WHERE id = $1")
+            .bind(screenshot_id)
+            .fetch_optional(pool)
+            .await?;
 
     Ok(row.map(|r| r.0))
 }
@@ -218,30 +221,60 @@ pub struct Screenshot {
     pub captured_at: chrono::DateTime<Utc>,
 }
 
+#[cfg(feature = "screenshots")]
+fn average_hash_8x8(img: &DynamicImage) -> String {
+    let grayscale = img.resize_exact(8, 8, FilterType::Triangle).to_luma8();
+
+    let mut sum: u32 = 0;
+    for pixel in grayscale.pixels() {
+        sum += pixel[0] as u32;
+    }
+    let avg = (sum / 64) as u8;
+
+    let mut bits: u64 = 0;
+    for (idx, pixel) in grayscale.pixels().enumerate() {
+        if pixel[0] >= avg {
+            bits |= 1u64 << idx;
+        }
+    }
+
+    format!("{:016x}", bits)
+}
+
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "screenshots")]
     use super::*;
 
     #[test]
     #[cfg(feature = "screenshots")]
     fn test_hash_identical_gives_zero_distance() {
-        use img_hash::image::{RgbaImage, Rgba};
+        use image::{Rgba, RgbaImage};
 
         // Create a simple 1x1 black pixel image
         let img = RgbaImage::from_pixel(1, 1, Rgba([0, 0, 0, 255]));
-
-        // Hash it twice to get identical hashes
-        let hasher = HasherConfig::new().to_hasher();
-        let hash1 = hasher.hash_image(&img);
-        let hash2 = hasher.hash_image(&img);
-
-        // Convert to base64 and compare
-        let hash1_b64 = hash1.to_base64();
-        let hash2_b64 = hash2.to_base64();
-
-        let distance = ScreenshotJob::compare_hashes(&hash1_b64, &hash2_b64).unwrap();
+        let dyn_img = image::DynamicImage::ImageRgba8(img);
+        let hash1 = average_hash_8x8(&dyn_img);
+        let hash2 = average_hash_8x8(&dyn_img);
+        let distance = ScreenshotJob::compare_hashes(&hash1, &hash2).unwrap();
 
         // Identical hashes should have distance 0
         assert_eq!(distance, 0);
+    }
+
+    #[test]
+    #[cfg(feature = "screenshots")]
+    fn test_hash_distance_detects_image_difference() {
+        use image::{GrayImage, Luma};
+
+        let black = GrayImage::from_pixel(8, 8, Luma([0u8]));
+        let mut almost_black = GrayImage::from_pixel(8, 8, Luma([0u8]));
+        almost_black.put_pixel(0, 0, Luma([255u8]));
+
+        let hash_black = average_hash_8x8(&DynamicImage::ImageLuma8(black));
+        let hash_almost_black = average_hash_8x8(&DynamicImage::ImageLuma8(almost_black));
+
+        let distance = ScreenshotJob::compare_hashes(&hash_black, &hash_almost_black).unwrap();
+        assert!(distance > 0);
     }
 }

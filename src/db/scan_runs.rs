@@ -17,16 +17,22 @@ pub struct ScanRun {
     pub error_message: Option<String>,
 }
 
-/// Create a new scan run
-pub async fn create_run(pool: &PgPool, scan_type: &str) -> Result<Uuid, AppError> {
-    let row: (Uuid,) = sqlx::query_as(
-        "INSERT INTO scan_runs (scan_type, status) VALUES ($1, 'running') RETURNING id"
+/// Try to create a running scan record atomically.
+/// Returns None when another scan is already marked as running.
+pub async fn try_create_run(pool: &PgPool, scan_type: &str) -> Result<Option<Uuid>, AppError> {
+    let row: Option<(Uuid,)> = sqlx::query_as(
+        "INSERT INTO scan_runs (scan_type, status)
+         SELECT $1, 'running'
+         WHERE NOT EXISTS (
+             SELECT 1 FROM scan_runs WHERE status = 'running'
+         )
+         RETURNING id",
     )
     .bind(scan_type)
-    .fetch_one(pool)
+    .fetch_optional(pool)
     .await?;
 
-    Ok(row.0)
+    Ok(row.map(|r| r.0))
 }
 
 /// Mark scan run as completed with stats
@@ -73,15 +79,4 @@ pub async fn list_recent(pool: &PgPool, limit: i64) -> Result<Vec<ScanRun>, AppE
     .await?;
 
     Ok(runs)
-}
-
-/// Check if a scan is currently running
-pub async fn is_scan_running(pool: &PgPool) -> Result<bool, AppError> {
-    let row: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM scan_runs WHERE status = 'running'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    Ok(row.0 > 0)
 }

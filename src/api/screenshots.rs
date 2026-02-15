@@ -14,8 +14,14 @@ use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/api/articles/:article_id/screenshots", get(get_screenshots))
-        .route("/api/screenshots/:screenshot_id/image", get(get_screenshot_image))
+        .route(
+            "/api/articles/:article_id/screenshots",
+            get(get_screenshots),
+        )
+        .route(
+            "/api/screenshots/:screenshot_id/image",
+            get(get_screenshot_image),
+        )
 }
 
 #[derive(Deserialize)]
@@ -33,12 +39,8 @@ async fn get_screenshots(
     Path(article_id): Path<Uuid>,
     Query(query): Query<ScreenshotsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    let screenshots = screenshots::get_timeline_with_drift(
-        &state.db,
-        article_id,
-        query.drift_threshold,
-    )
-    .await?;
+    let screenshots =
+        screenshots::get_timeline_with_drift(&state.db, article_id, query.drift_threshold).await?;
 
     Ok(Json(screenshots))
 }

@@ -161,6 +161,12 @@ cargo install sqlx-cli
 sqlx migrate run
 ```
 
+**2b. (Optional) Seed Local Demo Data**
+```bash
+psql "$DATABASE_URL" -f scripts/seed_dev_data.sql
+```
+Use this only for local/demo environments. It inserts synthetic sample articles and link checks.
+
 **3. Start Backend** (with all features enabled)
 ```bash
 cargo run --features "screenshots,tickets"
