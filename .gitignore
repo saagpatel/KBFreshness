@@ -1,0 +1,23 @@
+# Rust
+/target/
+Cargo.lock
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# SQLx
+.sqlx/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
