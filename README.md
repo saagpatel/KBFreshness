@@ -347,6 +347,13 @@ Structured logging with `tracing`:
 cargo test
 ```
 
+### Cleanup Local Artifacts
+```bash
+bash scripts/clean.sh
+```
+Removes local build/install artifacts (`target`, `frontend/node_modules`,
+`frontend/dist`, `.codex_audit`) and `.DS_Store` files.
+
 ### Code Review
 This codebase has been comprehensively reviewed and hardened:
 - ✅ No `unwrap()` in production paths
