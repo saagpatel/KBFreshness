@@ -179,6 +179,26 @@ npm install
 npm run dev
 ```
 
+### Lean Dev Mode (Low Disk)
+
+Use this when you want to keep local disk usage low during day-to-day development:
+
+```bash
+bash scripts/dev-lean.sh
+```
+
+What this does:
+- Starts backend with the normal command from this README:
+  `cargo run --features "screenshots,tickets"`
+- Starts frontend with the normal command from this README:
+  `npm run dev`
+- Redirects heavy build cache locations to `.lean-dev-cache/` while running
+- Automatically removes `.lean-dev-cache/` when the process exits (Ctrl+C)
+
+Tradeoff:
+- Lower persistent disk usage
+- Slightly slower startup/rebuilds because caches are temporary each run
+
 **5. Access Dashboard**
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3001
@@ -349,10 +369,28 @@ cargo test
 
 ### Cleanup Local Artifacts
 ```bash
+bash scripts/clean-heavy.sh
+```
+Removes heavy build artifacts only:
+- `target`
+- `frontend/dist`
+- `frontend/.vite`
+- `.lean-dev-cache`
+
+For full local reproducible cleanup:
+```bash
+bash scripts/clean-all.sh
+```
+Also removes:
+- `frontend/node_modules`
+- `.codex_audit`
+- `.DS_Store` files
+
+Backward-compatible alias:
+```bash
 bash scripts/clean.sh
 ```
-Removes local build/install artifacts (`target`, `frontend/node_modules`,
-`frontend/dist`, `.codex_audit`) and `.DS_Store` files.
+`scripts/clean.sh` now runs `scripts/clean-all.sh`.
 
 ### Code Review
 This codebase has been comprehensively reviewed and hardened:
