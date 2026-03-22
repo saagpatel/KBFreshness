@@ -14,10 +14,10 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_articles))
         .route("/stats", get(get_article_stats))
-        .route("/:id", get(get_article))
-        .route("/:id/links", get(get_article_links))
-        .route("/:id/review", post(review_article))
-        .route("/:id/flag", post(flag_article))
+        .route("/{id}", get(get_article))
+        .route("/{id}/links", get(get_article_links))
+        .route("/{id}/review", post(review_article))
+        .route("/{id}/flag", post(flag_article))
 }
 
 #[derive(Deserialize)]

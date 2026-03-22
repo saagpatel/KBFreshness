@@ -15,11 +15,11 @@ use uuid::Uuid;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
-            "/api/articles/:article_id/screenshots",
+            "/api/articles/{article_id}/screenshots",
             get(get_screenshots),
         )
         .route(
-            "/api/screenshots/:screenshot_id/image",
+            "/api/screenshots/{screenshot_id}/image",
             get(get_screenshot_image),
         )
 }
