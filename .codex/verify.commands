@@ -1,2 +1,8 @@
 # codex-os-managed
 test -f .codex/codex-os.manifest.json
+npm --prefix frontend run test -- --run
+npm --prefix frontend run build
+cargo test
+npm --prefix frontend run perf:bundle
+npm --prefix frontend run perf:build
+npm --prefix frontend run perf:assets

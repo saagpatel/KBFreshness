@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "perf:bundle": "node ../scripts/perf/bundle-report.mjs",
+    "perf:build": "node ../scripts/perf/measure-build-time.mjs",
+    "perf:assets": "bash ../scripts/perf/check-assets.sh",
+    "perf:memory": "node --expose-gc ../scripts/perf/memory-smoke.mjs",
+    "perf:lhci": "lhci autorun --config=../lighthouserc.json",
+    "perf:lhci:prod": "lhci autorun --config=../.lighthouserc.production.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",
@@ -24,6 +30,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",
     "vite": "^6.0.5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "@lhci/cli": "^0.15.1"
   }
 }
