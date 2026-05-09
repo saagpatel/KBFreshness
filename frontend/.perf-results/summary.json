@@ -1,0 +1,40 @@
+{
+  "capturedAt": "2026-05-09T12:27:11.341Z",
+  "metrics": {
+    "bundle": {
+      "source": "vite",
+      "totalBytes": 271546,
+      "assets": {
+        "index.html": 468,
+        "index-6sOsKs8v.css": 14992,
+        "index-DUcY4PC2.js": 256086
+      },
+      "capturedAt": "2026-05-09T12:27:08.382Z"
+    },
+    "build": {
+      "buildMs": 1945,
+      "capturedAt": "2026-05-09T12:27:10.574Z",
+      "command": "npm_execpath run build"
+    },
+    "assets": {
+      "status": "pass",
+      "maxBytes": 350000,
+      "largestFile": "dist/assets/index-DUcY4PC2.js",
+      "largestBytes": 256086,
+      "checkedRoots": [
+        "dist/assets"
+      ]
+    },
+    "memory": {
+      "heapBefore": 3414920,
+      "heapAfter": 3421392,
+      "deltaMb": 0.01,
+      "maxDeltaMb": 10,
+      "capturedAt": "2026-05-09T12:27:11.098Z"
+    },
+    "api": {
+      "status": "not-run"
+    }
+  },
+  "status": "pass"
+}

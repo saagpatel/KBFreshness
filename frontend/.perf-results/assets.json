@@ -1,0 +1,9 @@
+{
+  "status": "pass",
+  "maxBytes": 350000,
+  "largestFile": "dist/assets/index-DUcY4PC2.js",
+  "largestBytes": 256086,
+  "checkedRoots": [
+    "dist/assets"
+  ]
+}
