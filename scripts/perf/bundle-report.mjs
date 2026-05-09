@@ -29,9 +29,15 @@ function nextBundle() {
 
 function viteBundle() {
   const distAssets = "dist/assets";
-  if (!existsSync(distAssets)) return null;
+  const distHtml = "dist/index.html";
+  if (!existsSync(distAssets) && !existsSync(distHtml)) return null;
 
   const result = { source: "vite", totalBytes: 0, assets: {} };
+  if (existsSync(distHtml)) {
+    const htmlSize = statSync(distHtml).size;
+    result.assets["index.html"] = htmlSize;
+    result.totalBytes += htmlSize;
+  }
   for (const file of readdirSync(distAssets)) {
     const full = path.join(distAssets, file);
     try {
