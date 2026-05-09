@@ -1,2 +1,13 @@
 # codex-os-managed
 test -f .codex/codex-os.manifest.json
+npm --prefix frontend ci
+npm --prefix frontend run test -- --run
+cargo test
+npm --prefix frontend run build
+npm --prefix frontend run perf:bundle
+npm --prefix frontend run perf:build
+npm --prefix frontend run perf:assets
+npm --prefix frontend run perf:memory
+node scripts/perf/compare-metric.mjs .perf-baselines/bundle.json frontend/.perf-results/bundle.json totalBytes 0.08
+node scripts/perf/compare-metric.mjs .perf-baselines/build-time.json frontend/.perf-results/build-time.json buildMs 0.15
+cd frontend && node ../scripts/perf/summarize.mjs
