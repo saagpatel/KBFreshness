@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMMANDS_FILE="${1:-.codex/verify.commands}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+VERIFY_FILE="$ROOT_DIR/.codex/verify.commands"
 
-if [[ ! -f "$COMMANDS_FILE" ]]; then
-  echo "Missing $COMMANDS_FILE"
-  exit 2
+cd "$ROOT_DIR"
+
+if [[ ! -f "$VERIFY_FILE" ]]; then
+  echo "Missing verify commands file: $VERIFY_FILE" >&2
+  exit 1
 fi
 
-while IFS= read -r cmd || [[ -n "$cmd" ]]; do
-  [[ -z "${cmd//[[:space:]]/}" ]] && continue
-  [[ "$cmd" =~ ^[[:space:]]*# ]] && continue
+while IFS= read -r command || [[ -n "$command" ]]; do
+  if [[ -z "$command" || "$command" =~ ^# ]]; then
+    continue
+  fi
+  echo "[verify] $command"
+  bash -lc "$command"
+done < "$VERIFY_FILE"
 
-  echo ">> $cmd"
-  eval "$cmd"
-done < "$COMMANDS_FILE"
+echo "[verify] all commands passed"
