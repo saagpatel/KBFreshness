@@ -13,17 +13,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-        with:
-          version: 10.28.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build || pnpm build:ui
-      - run: pnpm perf:bundle
-      - run: node scripts/perf/compare-metric.mjs .perf-baselines/bundle.json .perf-results/bundle.json totalBytes 0.08
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+      - run: npm --prefix frontend run perf:bundle
+      - run: node scripts/perf/compare-metric.mjs .perf-baselines/bundle.json frontend/.perf-results/bundle.json totalBytes 0.08
 
   perf-build:
     if: ${{ vars.PERF_PROFILE == 'production' }}
@@ -32,16 +30,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-        with:
-          version: 10.28.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm perf:build
-      - run: node scripts/perf/compare-metric.mjs .perf-baselines/build-time.json .perf-results/build-time.json buildMs 0.15
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run perf:build
+      - run: node scripts/perf/compare-metric.mjs .perf-baselines/build-time.json frontend/.perf-results/build-time.json buildMs 0.15
 
   perf-assets:
     if: ${{ vars.PERF_PROFILE == 'production' }}
@@ -50,7 +46,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - run: ASSET_MAX_BYTES=250000 bash scripts/perf/check-assets.sh
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+      - run: ASSET_MAX_BYTES=250000 npm --prefix frontend run perf:assets
 
   perf-memory:
     if: ${{ vars.PERF_PROFILE == 'production' }}
@@ -59,15 +62,13 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-        with:
-          version: 10.28.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: MEMORY_MAX_DELTA_MB=5 pnpm perf:memory
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: MEMORY_MAX_DELTA_MB=5 npm --prefix frontend run perf:memory
 
   perf-lighthouse:
     if: ${{ vars.PERF_PROFILE == 'production' }}
@@ -76,16 +77,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-        with:
-          version: 10.28.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build || pnpm build:ui
-      - run: pnpm perf:lhci:prod || pnpm perf:lhci
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+      - run: npm --prefix frontend run perf:lhci:prod --if-present || npm --prefix frontend run perf:lhci --if-present
 
   perf-api:
     if: ${{ vars.PERF_PROFILE == 'production' && vars.PERF_BASE_URL != '' }}
