@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-05-09T12:27:11.341Z",
+  "capturedAt": "2026-05-10T13:20:17.890Z",
   "metrics": {
     "bundle": {
       "source": "vite",
@@ -9,11 +9,11 @@
         "index-6sOsKs8v.css": 14992,
         "index-DUcY4PC2.js": 256086
       },
-      "capturedAt": "2026-05-09T12:27:08.382Z"
+      "capturedAt": "2026-05-10T13:20:15.775Z"
     },
     "build": {
-      "buildMs": 1945,
-      "capturedAt": "2026-05-09T12:27:10.574Z",
+      "buildMs": 1383,
+      "capturedAt": "2026-05-10T13:20:17.326Z",
       "command": "npm_execpath run build"
     },
     "assets": {
@@ -27,10 +27,10 @@
     },
     "memory": {
       "heapBefore": 3414920,
-      "heapAfter": 3421392,
+      "heapAfter": 3421424,
       "deltaMb": 0.01,
       "maxDeltaMb": 10,
-      "capturedAt": "2026-05-09T12:27:11.098Z"
+      "capturedAt": "2026-05-10T13:20:17.712Z"
     },
     "api": {
       "status": "not-run"
