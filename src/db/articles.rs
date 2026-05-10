@@ -316,6 +316,7 @@ fn parse_health_filter(health_filter: Option<&str>) -> Result<Option<HealthStatu
 fn map_article_row(row: ArticleRow, now: &DateTime<Utc>) -> ArticleWithHealth {
     let threshold = row
         .freshness_threshold_days
+        .map(i64::from)
         .unwrap_or(DEFAULT_FRESHNESS_THRESHOLD_DAYS);
     let effective_date = row.reviewed_at.unwrap_or(row.last_modified_at);
     let effective_age_days = (*now - effective_date).num_days().max(0);
@@ -410,7 +411,7 @@ struct ArticleRow {
     last_modified_at: DateTime<Utc>,
     last_modified_by: Option<String>,
     version_number: i32,
-    freshness_threshold_days: Option<i64>,
+    freshness_threshold_days: Option<i32>,
     manually_flagged: bool,
     reviewed_at: Option<DateTime<Utc>>,
     reviewed_by: Option<String>,

@@ -1,5 +1,5 @@
 {
-  "buildMs": 1945,
-  "capturedAt": "2026-05-09T12:27:10.574Z",
+  "buildMs": 1383,
+  "capturedAt": "2026-05-10T13:20:17.326Z",
   "command": "npm_execpath run build"
 }
