@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
@@ -29,7 +29,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
@@ -45,7 +45,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
@@ -61,7 +61,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
@@ -76,7 +76,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
@@ -92,7 +92,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: grafana/setup-k6-action@ffe7d7290dfa715e48c2ccc924d068444c94bde2
       - run: k6 run tests/perf/api.k6.js --summary-export=.perf-results/api-summary.json
         env:
@@ -106,7 +106,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - run: psql "${{ vars.PERF_DATABASE_URL }}" -f scripts/perf/db/check-pg-stat.sql
