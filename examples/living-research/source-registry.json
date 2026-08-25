@@ -1,0 +1,68 @@
+{
+  "registered_at": "2026-08-23T00:00:00Z",
+  "sources": [
+    {
+      "canonical_locator": "https://standards.example.test/policy",
+      "claim_bindings": [
+        {
+          "accepted_conclusion": "The policy takes effect January 1.",
+          "claim_id": "claim-policy-effective-date",
+          "selector": {
+            "anchor": "effective date",
+            "kind": "html_text"
+          }
+        }
+      ],
+      "cosmetic_text_patterns": [],
+      "freshness": {
+        "expected_update_pattern": "versioned policy with effective date",
+        "max_age_hours": 168
+      },
+      "locator_aliases": [],
+      "name": "Official policy page",
+      "research_package_id": "package-policy-analysis",
+      "source_id": "web-source-test-policy",
+      "source_kind": "html_document",
+      "trust": "authoritative"
+    },
+    {
+      "canonical_locator": "https://data.example.test/regional-thresholds.csv",
+      "claim_bindings": [
+        {
+          "accepted_conclusion": "The North region threshold is 5.",
+          "claim_id": "claim-csv-north-threshold",
+          "selector": {
+            "kind": "json_pointer",
+            "pointer": "/rows/north/threshold"
+          }
+        }
+      ],
+      "freshness": {
+        "expected_update_pattern": "monthly versioned CSV release",
+        "max_age_hours": 720
+      },
+      "locator_aliases": [],
+      "name": "Versioned regional threshold dataset",
+      "research_package_id": "package-regional-threshold-analysis",
+      "review_policy": {
+        "approval_rule": "all_approve",
+        "required_independent_reviewers": 2
+      },
+      "source_id": "source-csv-thresholds",
+      "source_kind": "tabular_csv",
+      "tabular_csv": {
+        "delimiter": ",",
+        "encoding": "utf-8-sig",
+        "header": true,
+        "ignored_columns": [
+          "generated_at"
+        ],
+        "key_columns": [
+          "region"
+        ],
+        "quotechar": "\""
+      },
+      "trust": "primary"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "content": "<main><p>Effective date is January 1.</p></main>",
+  "content_identity": "sha256:adapter-advisory-baseline",
+  "declared_version": "1",
+  "extraction_method": "readability_service_worker",
+  "extraction_warnings": [],
+  "locator": "https://standards.example.test/policy",
+  "observed_at": "2026-08-23T01:00:00Z",
+  "page_diff": null,
+  "response_status": 200,
+  "retry_after_seconds": null,
+  "schema": "ResearchCapturePacketV1",
+  "source_id": "web-source-test-policy",
+  "source_kind": "html_document",
+  "source_metadata": {
+    "freshness": {
+      "expected_update_pattern": "versioned policy with effective date",
+      "max_age_hours": 168
+    },
+    "name": "Official policy page",
+    "trust": "authoritative"
+  },
+  "status": "observed"
+}

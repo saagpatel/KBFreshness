@@ -10,6 +10,7 @@ pub struct AppState {
 #[derive(Clone)]
 pub struct Config {
     pub database_url: String,
+    pub background_automation_enabled: bool,
     pub confluence_base_url: Option<String>,
     pub confluence_email: Option<String>,
     pub confluence_api_token: Option<String>,
@@ -29,6 +30,11 @@ impl Config {
 
         Ok(Config {
             database_url,
+            background_automation_enabled: parse_background_automation_enabled(
+                std::env::var("BACKGROUND_AUTOMATION_ENABLED")
+                    .ok()
+                    .as_deref(),
+            ),
             confluence_base_url: std::env::var("CONFLUENCE_BASE_URL").ok(),
             confluence_email: std::env::var("CONFLUENCE_EMAIL").ok(),
             confluence_api_token: std::env::var("CONFLUENCE_API_TOKEN").ok(),
@@ -41,6 +47,13 @@ impl Config {
     }
 }
 
+fn parse_background_automation_enabled(value: Option<&str>) -> bool {
+    matches!(
+        value.map(str::trim).map(str::to_ascii_lowercase).as_deref(),
+        Some("1" | "true" | "yes")
+    )
+}
+
 pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
     PgPoolOptions::new()
         .max_connections(10)
@@ -50,4 +63,18 @@ pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
         .max_lifetime(Duration::from_secs(1800))
         .connect(database_url)
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_background_automation_enabled;
+
+    #[test]
+    fn background_automation_is_fail_closed() {
+        assert!(!parse_background_automation_enabled(None));
+        assert!(!parse_background_automation_enabled(Some("0")));
+        assert!(!parse_background_automation_enabled(Some("unexpected")));
+        assert!(parse_background_automation_enabled(Some("true")));
+        assert!(parse_background_automation_enabled(Some("1")));
+    }
 }

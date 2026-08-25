@@ -57,17 +57,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: config.clone(),
     };
 
-    // Set up job scheduler
-    let scheduler = JobScheduler::new()
-        .await
-        .map_err(|e| format!("Failed to create scheduler: {}", e))?;
+    // Scheduling is deliberately opt-in. Manual/local qualification must not
+    // silently become a recurring service.
+    let _scheduler_guard = if config.background_automation_enabled {
+        let scheduler = JobScheduler::new()
+            .await
+            .map_err(|e| format!("Failed to create scheduler: {}", e))?;
 
-    let mut job_count = 0;
+        let mut job_count = 0;
 
-    // Phase 2: Daily link check at 2 AM
-    let pool_clone = pool.clone();
-    let config_clone = config.clone();
-    scheduler
+        // Phase 2: Daily link check at 2 AM
+        let pool_clone = pool.clone();
+        let config_clone = config.clone();
+        scheduler
         .add(Job::new_async("0 0 2 * * *", move |_uuid, _lock| {
             let pool = pool_clone.clone();
             let config = config_clone.clone();
@@ -107,76 +109,83 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?)
         .await
         .map_err(|e| format!("Failed to add link check job: {}", e))?;
-    job_count += 1;
+        job_count += 1;
 
-    // Phase 3: Daily screenshot cleanup at 3 AM
-    let pool_clone = pool.clone();
-    scheduler
-        .add(Job::new_async("0 0 3 * * *", move |_uuid, _lock| {
-            let pool = pool_clone.clone();
-            #[cfg(not(feature = "screenshots"))]
-            let _ = &pool;
-            Box::pin(async move {
-                tracing::info!("Starting scheduled screenshot cleanup");
-                #[cfg(feature = "screenshots")]
-                {
-                    match jobs::screenshot_cleanup::cleanup_old_screenshots(&pool).await {
-                        Ok(count) => tracing::info!("Cleaned up {} old screenshots", count),
-                        Err(e) => tracing::error!("Screenshot cleanup failed: {}", e),
-                    }
-                }
+        // Phase 3: Daily screenshot cleanup at 3 AM
+        let pool_clone = pool.clone();
+        scheduler
+            .add(Job::new_async("0 0 3 * * *", move |_uuid, _lock| {
+                let pool = pool_clone.clone();
                 #[cfg(not(feature = "screenshots"))]
-                {
-                    tracing::debug!("Screenshot cleanup skipped (feature not enabled)");
-                }
-            })
-        })?)
-        .await
-        .map_err(|e| format!("Failed to add cleanup job: {}", e))?;
-    job_count += 1;
+                let _ = &pool;
+                Box::pin(async move {
+                    tracing::info!("Starting scheduled screenshot cleanup");
+                    #[cfg(feature = "screenshots")]
+                    {
+                        match jobs::screenshot_cleanup::cleanup_old_screenshots(&pool).await {
+                            Ok(count) => tracing::info!("Cleaned up {} old screenshots", count),
+                            Err(e) => tracing::error!("Screenshot cleanup failed: {}", e),
+                        }
+                    }
+                    #[cfg(not(feature = "screenshots"))]
+                    {
+                        tracing::debug!("Screenshot cleanup skipped (feature not enabled)");
+                    }
+                })
+            })?)
+            .await
+            .map_err(|e| format!("Failed to add cleanup job: {}", e))?;
+        job_count += 1;
 
-    // Phase 3: Weekly screenshot capture on Mondays at 4 AM
-    let pool_clone = pool.clone();
-    scheduler
-        .add(Job::new_async("0 0 4 * * MON", move |_uuid, _lock| {
-            let pool = pool_clone.clone();
-            Box::pin(async move {
-                tracing::info!("Starting scheduled screenshot capture");
-                match jobs::freshness_scan::run_screenshot_scan(&pool).await {
-                    Ok(count) => tracing::info!("Captured {} screenshots", count),
-                    Err(e) => tracing::error!("Screenshot scan failed: {}", e),
-                }
-            })
-        })?)
-        .await
-        .map_err(|e| format!("Failed to add screenshot job: {}", e))?;
-    job_count += 1;
+        // Phase 3: Weekly screenshot capture on Mondays at 4 AM
+        let pool_clone = pool.clone();
+        scheduler
+            .add(Job::new_async("0 0 4 * * MON", move |_uuid, _lock| {
+                let pool = pool_clone.clone();
+                Box::pin(async move {
+                    tracing::info!("Starting scheduled screenshot capture");
+                    match jobs::freshness_scan::run_screenshot_scan(&pool).await {
+                        Ok(count) => tracing::info!("Captured {} screenshots", count),
+                        Err(e) => tracing::error!("Screenshot scan failed: {}", e),
+                    }
+                })
+            })?)
+            .await
+            .map_err(|e| format!("Failed to add screenshot job: {}", e))?;
+        job_count += 1;
 
-    // Phase 4: Weekly ticket analysis on Mondays at 5 AM
-    let pool_clone = pool.clone();
-    let config_clone = config.clone();
-    scheduler
-        .add(Job::new_async("0 0 5 * * MON", move |_uuid, _lock| {
-            let pool = pool_clone.clone();
-            let config = config_clone.clone();
-            Box::pin(async move {
-                tracing::info!("Starting scheduled ticket analysis");
-                match jobs::ticket_analyzer::run_ticket_analysis(&pool, &config).await {
-                    Ok(count) => tracing::info!("Created {} ticket patterns", count),
-                    Err(e) => tracing::error!("Ticket analysis failed: {}", e),
-                }
-            })
-        })?)
-        .await
-        .map_err(|e| format!("Failed to add ticket analysis job: {}", e))?;
-    job_count += 1;
+        // Phase 4: Weekly ticket analysis on Mondays at 5 AM
+        let pool_clone = pool.clone();
+        let config_clone = config.clone();
+        scheduler
+            .add(Job::new_async("0 0 5 * * MON", move |_uuid, _lock| {
+                let pool = pool_clone.clone();
+                let config = config_clone.clone();
+                Box::pin(async move {
+                    tracing::info!("Starting scheduled ticket analysis");
+                    match jobs::ticket_analyzer::run_ticket_analysis(&pool, &config).await {
+                        Ok(count) => tracing::info!("Created {} ticket patterns", count),
+                        Err(e) => tracing::error!("Ticket analysis failed: {}", e),
+                    }
+                })
+            })?)
+            .await
+            .map_err(|e| format!("Failed to add ticket analysis job: {}", e))?;
+        job_count += 1;
 
-    scheduler
-        .start()
-        .await
-        .map_err(|e| format!("Failed to start scheduler: {}", e))?;
+        scheduler
+            .start()
+            .await
+            .map_err(|e| format!("Failed to start scheduler: {}", e))?;
 
-    tracing::info!("Scheduler started with {} jobs", job_count);
+        tracing::info!("Scheduler started with {} jobs", job_count);
+        Some(scheduler)
+    } else {
+        tracing::info!(
+            "Background automation is unarmed; set BACKGROUND_AUTOMATION_ENABLED=1 to opt in"
+        );
+        None
+    };
 
     // Build router
     let app = api::create_router(state);
