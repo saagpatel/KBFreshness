@@ -58,6 +58,26 @@ Configure Confluence API credentials and scan targets in **Settings** on first l
 
 The Rust backend drives all monitoring work: concurrent HTTP requests for link validation with configurable rate limiting, headless screenshot capture on a weekly schedule, and a fuzzy matching pipeline for ticket correlation. The health dashboard aggregates scan results into scores the documentation team can act on. AI suggestions run as a separate pass after correlation and never affect the deterministic health scores.
 
+## Living Research upgrade
+
+The repository now owns a zero-dependency manual research ledger that consumes
+portable PageDiffBookmark capture packets, structured JSON observations, and
+explicitly keyed versioned CSV datasets. It preserves every source version,
+maps material changes to registered claims, creates inspectable review
+proposals, and changes accepted conclusions only after an explicit review with
+a supersession record. CSV sources can require append-only independent reviewer
+responses before final approval. See
+[`docs/LIVING_RESEARCH.md`](docs/LIVING_RESEARCH.md).
+
+Background jobs are fail-closed: `BACKGROUND_AUTOMATION_ENABLED` defaults to
+disabled. The Living Research qualification does not arm the scheduler or
+prove provider or natural-recurrence reliability.
+
+For controlled local recurrence qualification, the disposable
+`tools/living_research_recurrence.py` harness waits for real timer slots and
+writes terminal receipts without enabling the application scheduler or calling
+providers. Its evidence ceiling is local timer delivery only.
+
 ## License
 
 MIT
