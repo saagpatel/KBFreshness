@@ -20,7 +20,7 @@ KB Freshness Detector continuously monitors Confluence knowledge base articles f
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.19+ (Vite 8 requirement)
 - Rust stable toolchain (`rustup`)
 - Tauri system dependencies: [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
 - Confluence API credentials

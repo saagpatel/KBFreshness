@@ -24,7 +24,7 @@ export function LinkCheckResults({ articleId }: LinkCheckResultsProps) {
           </h3>
           <div className="space-y-2">
             {brokenLinks.map((link) => (
-              <div key={link.id} className="p-3 bg-red-50 border border-red-200 rounded">
+              <div key={link.id} className="p-3 bg-red-50 border border-red-200 rounded-sm">
                 <div className="flex justify-between items-start">
                   <a
                     href={link.url}
@@ -34,7 +34,7 @@ export function LinkCheckResults({ articleId }: LinkCheckResultsProps) {
                   >
                     {link.url}
                   </a>
-                  <span className="ml-2 px-2 py-0.5 bg-red-600 text-white text-xs rounded">
+                  <span className="ml-2 px-2 py-0.5 bg-red-600 text-white text-xs rounded-sm">
                     {link.status_code || 'ERROR'}
                   </span>
                 </div>

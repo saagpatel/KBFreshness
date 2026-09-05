@@ -58,7 +58,7 @@ export function ArticlePage({ articleId, onBack }: ArticlePageProps) {
           ← Back to Dashboard
         </button>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-2xl font-bold mb-2">{article.title}</h1>
@@ -75,7 +75,7 @@ export function ArticlePage({ articleId, onBack }: ArticlePageProps) {
           </div>
 
           {/* Metadata */}
-          <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded">
+          <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-sm">
             <div>
               <div className="text-sm text-gray-600">Source</div>
               <div className="font-medium capitalize">{article.source}</div>
@@ -117,14 +117,14 @@ export function ArticlePage({ articleId, onBack }: ArticlePageProps) {
             <button
               onClick={handleReview}
               disabled={reviewMutation.isPending}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              className="px-4 py-2 bg-green-600 text-white rounded-sm hover:bg-green-700 disabled:opacity-50"
             >
               {reviewMutation.isPending ? 'Saving...' : 'Mark as Reviewed'}
             </button>
             <button
               onClick={handleFlag}
               disabled={flagMutation.isPending}
-              className={`px-4 py-2 rounded ${
+              className={`px-4 py-2 rounded-sm ${
                 article.manually_flagged
                   ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   : 'bg-red-600 text-white hover:bg-red-700'

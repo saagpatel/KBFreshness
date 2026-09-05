@@ -39,7 +39,7 @@ export function ArticleTable({ onArticleClick }: ArticleTableProps) {
       <div className="flex gap-2">
         <button
           onClick={() => setHealthFilter(undefined)}
-          className={`px-3 py-1.5 rounded text-sm ${
+          className={`px-3 py-1.5 rounded-sm text-sm ${
             !healthFilter ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'
           }`}
         >
@@ -47,7 +47,7 @@ export function ArticleTable({ onArticleClick }: ArticleTableProps) {
         </button>
         <button
           onClick={() => setHealthFilter('green')}
-          className={`px-3 py-1.5 rounded text-sm ${
+          className={`px-3 py-1.5 rounded-sm text-sm ${
             healthFilter === 'green' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'
           }`}
         >
@@ -55,7 +55,7 @@ export function ArticleTable({ onArticleClick }: ArticleTableProps) {
         </button>
         <button
           onClick={() => setHealthFilter('yellow')}
-          className={`px-3 py-1.5 rounded text-sm ${
+          className={`px-3 py-1.5 rounded-sm text-sm ${
             healthFilter === 'yellow' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-800'
           }`}
         >
@@ -63,7 +63,7 @@ export function ArticleTable({ onArticleClick }: ArticleTableProps) {
         </button>
         <button
           onClick={() => setHealthFilter('red')}
-          className={`px-3 py-1.5 rounded text-sm ${
+          className={`px-3 py-1.5 rounded-sm text-sm ${
             healthFilter === 'red' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-800'
           }`}
         >
@@ -145,7 +145,7 @@ export function ArticleTable({ onArticleClick }: ArticleTableProps) {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              className="px-3 py-1 bg-gray-200 rounded-sm disabled:opacity-50"
             >
               Previous
             </button>
@@ -153,7 +153,7 @@ export function ArticleTable({ onArticleClick }: ArticleTableProps) {
               onClick={() => setPage((p) => p + 1)}
               // Disable "Next" when current page times limit reaches or exceeds total
               disabled={page * data.limit >= data.total}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              className="px-3 py-1 bg-gray-200 rounded-sm disabled:opacity-50"
             >
               Next
             </button>
