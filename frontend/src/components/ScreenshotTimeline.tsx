@@ -38,7 +38,7 @@ export function ScreenshotTimeline({ articleId }: ScreenshotTimelineProps) {
           return (
             <div
               key={screenshot.id}
-              className={`p-4 rounded border ${
+              className={`p-4 rounded-sm border ${
                 screenshot.needs_update
                   ? 'bg-yellow-50 border-yellow-300'
                   : 'bg-white border-gray-200'
@@ -61,14 +61,14 @@ export function ScreenshotTimeline({ articleId }: ScreenshotTimelineProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => window.open(getScreenshotImageUrl(screenshot.id), '_blank')}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-sm hover:bg-blue-700"
                   >
                     View
                   </button>
                   {hasNext && nextScreenshot && (
                     <button
                       onClick={() => handleCompare(screenshot.id, nextScreenshot.id)}
-                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded-sm hover:bg-gray-700"
                     >
                       Compare
                     </button>
@@ -83,7 +83,7 @@ export function ScreenshotTimeline({ articleId }: ScreenshotTimelineProps) {
       {/* Side-by-side comparison modal */}
       {selectedPair && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => setSelectedPair(null)}
         >
           <div
@@ -94,7 +94,7 @@ export function ScreenshotTimeline({ articleId }: ScreenshotTimelineProps) {
               <h3 className="text-lg font-semibold">Screenshot Comparison</h3>
               <button
                 onClick={() => setSelectedPair(null)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 rounded-sm hover:bg-gray-300"
               >
                 Close
               </button>
@@ -106,7 +106,7 @@ export function ScreenshotTimeline({ articleId }: ScreenshotTimelineProps) {
                   <img
                     src={getScreenshotImageUrl(selectedPair.current)}
                     alt="Current screenshot"
-                    className="w-full border border-gray-300 rounded shadow-sm"
+                    className="w-full border border-gray-300 rounded-sm shadow-xs"
                   />
                 </div>
                 <div>
@@ -114,7 +114,7 @@ export function ScreenshotTimeline({ articleId }: ScreenshotTimelineProps) {
                   <img
                     src={getScreenshotImageUrl(selectedPair.previous)}
                     alt="Previous screenshot"
-                    className="w-full border border-gray-300 rounded shadow-sm"
+                    className="w-full border border-gray-300 rounded-sm shadow-xs"
                   />
                 </div>
               </div>

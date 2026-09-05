@@ -20,26 +20,26 @@ export function Dashboard({ onArticleClick }: DashboardProps) {
 
         {/* Summary cards */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow">
+          <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="text-2xl font-bold">{statsData.total}</div>
             <div className="text-gray-600">Total Articles</div>
           </div>
-          <div className="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200">
+          <div className="bg-green-50 p-6 rounded-lg shadow-sm border-2 border-green-200">
             <div className="text-2xl font-bold text-green-800">{statsData.green}</div>
             <div className="text-green-700">Green</div>
           </div>
-          <div className="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200">
+          <div className="bg-yellow-50 p-6 rounded-lg shadow-sm border-2 border-yellow-200">
             <div className="text-2xl font-bold text-yellow-800">{statsData.yellow}</div>
             <div className="text-yellow-700">Yellow</div>
           </div>
-          <div className="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200">
+          <div className="bg-red-50 p-6 rounded-lg shadow-sm border-2 border-red-200">
             <div className="text-2xl font-bold text-red-800">{statsData.red}</div>
             <div className="text-red-700">Red</div>
           </div>
         </div>
 
         {/* Article table */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Articles</h2>
           <ArticleTable onArticleClick={onArticleClick} />
         </div>
