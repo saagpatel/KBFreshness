@@ -6,6 +6,8 @@ on:
 
 jobs:
   enforce:
+    # Dependabot lockfile bumps are their own rationale.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
