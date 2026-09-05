@@ -16,10 +16,10 @@ export function TicketPatterns({ patterns }: TicketPatternsProps) {
   return (
     <div className="space-y-4">
       {patterns.map((pattern) => (
-        <div key={pattern.id} className="p-4 bg-blue-50 border border-blue-200 rounded">
+        <div key={pattern.id} className="p-4 bg-blue-50 border border-blue-200 rounded-sm">
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded">
+              <span className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded-sm">
                 {pattern.ticket_count} {pattern.ticket_count === 1 ? 'ticket' : 'tickets'}
               </span>
               <span className="text-sm text-gray-600">
@@ -34,7 +34,7 @@ export function TicketPatterns({ patterns }: TicketPatternsProps) {
               {pattern.keywords.map((keyword, idx) => (
                 <span
                   key={idx}
-                  className="px-2 py-1 bg-white border border-blue-300 text-blue-700 text-xs rounded"
+                  className="px-2 py-1 bg-white border border-blue-300 text-blue-700 text-xs rounded-sm"
                 >
                   {keyword}
                 </span>
