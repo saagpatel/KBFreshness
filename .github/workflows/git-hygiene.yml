@@ -7,6 +7,9 @@ on:
 
 jobs:
   commitlint:
+    # Dependabot branches and commit bodies are generated and cannot follow
+    # the repo conventions; the other gates still run on them.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,6 +29,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   branch-name:
+    # Dependabot branches and commit bodies are generated and cannot follow
+    # the repo conventions; the other gates still run on them.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
