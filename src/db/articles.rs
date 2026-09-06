@@ -203,10 +203,11 @@ pub async fn list_articles_with_health(
     if let Some(filter_health) = filter_health {
         // Health is computed from dynamic fields, so apply filter after row mapping,
         // then paginate in memory for correctness.
-        let rows = sqlx::query_as::<ArticleRow>(&base_query)
-            .bind(space_filter)
-            .fetch_all(pool)
-            .await?;
+        let rows =
+            sqlx::query_as::<ArticleRow>(crate::sqlx_compat::AssertSqlSafe(base_query.as_str()))
+                .bind(space_filter)
+                .fetch_all(pool)
+                .await?;
 
         let filtered: Vec<ArticleWithHealth> = rows
             .into_iter()
@@ -238,12 +239,14 @@ pub async fn list_articles_with_health(
         let total = total.0;
 
         let paginated_query = format!("{} LIMIT $2 OFFSET $3", base_query);
-        let rows = sqlx::query_as::<ArticleRow>(&paginated_query)
-            .bind(space_filter)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(pool)
-            .await?;
+        let rows = sqlx::query_as::<ArticleRow>(crate::sqlx_compat::AssertSqlSafe(
+            paginated_query.as_str(),
+        ))
+        .bind(space_filter)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
 
         let articles = rows
             .into_iter()
