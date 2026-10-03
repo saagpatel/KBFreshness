@@ -46,7 +46,7 @@ npm --prefix frontend run dev
 ```
 
 The maintained backend is the root Axum Cargo package, not a Tauri shell.
-Running `cargo run` requires a disposable PostgreSQL `DATABASE_URL` and
+Running `cargo run --locked` requires a disposable PostgreSQL `DATABASE_URL` and
 applies migrations. Keep `BACKGROUND_AUTOMATION_ENABLED=false`; starting the
 backend or triggering a provider scan is not an offline verification step.
 Provider credentials are optional until that provider is explicitly used.
@@ -61,12 +61,10 @@ python3 -m unittest discover -s tests -p test_living_research.py -k cosmetic
 
 The broader ledger suite uses the same command without `-k cosmetic` and writes
 only temporary fixture state. Rust's focused scheduler-policy test is
-`cargo test --bin kb-freshness-detector background_automation_is_fail_closed`.
+`cargo test --locked --bin kb-freshness-detector background_automation_is_fail_closed`.
 Frontend checks are `npm --prefix frontend run test -- --run` (non-watch) and
 `npm --prefix frontend run build` (TypeScript plus Vite). No frontend lint script is defined.
-Rust formatting/checking is `cargo fmt --all -- --check` and `cargo check`.
-No `Cargo.lock` is included in this checkout; Cargo dependency resolution may
-require network access, so these are not guaranteed offline checks.
+Rust formatting/checking is `cargo fmt --all -- --check` and `cargo check --locked`.
 
 The [canonical full gate](.codex/verify.commands) also includes Rust tests and
 performance baselines; inspect database-dependent tests and optional
