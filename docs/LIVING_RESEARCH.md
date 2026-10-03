@@ -64,18 +64,22 @@ python3 tools/living_research.py inspect \
 
 The second ingest proposes review because the changed sentence intersects the
 claim's `effective date` selector. It does not change the accepted conclusion.
-A reviewer must submit an explicit decision with reviewer, rationale, time, and
-an `approved`, `rejected`, or `deferred` outcome. Approval requires a new
-conclusion and appends a supersession record. Deferral preserves the accepted
-conclusion and keeps the proposal reviewable.
+A reviewer must submit an explicit decision with reviewer, rationale, and time.
+The outcome is `approved`, `rejected`, or `deferred`. If omitted, it is
+inferred as `approved` when `approved_conclusions` is supplied, otherwise
+`rejected`. Approval requires a nonempty `approved_conclusions` mapping and
+appends a supersession record; the conclusion text need not change. Deferral
+preserves the accepted conclusion and keeps the proposal reviewable.
 
 ## Versioned CSV workflow
 
-CSV registrations must declare a header, exactly one stable key column,
-UTF-8 encoding, delimiter and quote character, and any non-semantic ignored
-columns. Cell values remain strings. Row order, line endings, and changes to an
+CSV registrations must declare a header and exactly one stable key column.
+Encoding defaults to `utf-8-sig` (`utf-8` is also accepted), delimiter to comma,
+quote character to double quote, and non-semantic ignored columns to an empty
+list. Cell values remain strings. Row order, line endings, and changes to an
 ignored column do not change content identity. Duplicate headers, duplicate or
-empty keys, and rows with the wrong number of cells are malformed.
+empty keys, and nonblank rows with the wrong number of cells are malformed.
+Blank rows are skipped.
 
 ```bash
 python3 tools/living_research.py init \
@@ -124,6 +128,9 @@ supersession. A generated packet or synthetic response is not evidence that a
 genuine human pilot occurred.
 
 ## Materiality rules
+
+The first capture is always `baseline` without a review proposal. Subsequent
+captures use these rules:
 
 | Observation | Classification | Review proposal |
 | --- | --- | --- |
