@@ -28,11 +28,11 @@ Portfolio truth currently marks this project as `recent` with `boilerplate` cont
 ## Stack
 
 - Primary stack: Rust
-- Rust workspace contract is defined in `Cargo.toml`.
+- Rust package contract is defined in `Cargo.toml`.
 
 ## How To Run
 
-- Use `cargo run` for the normal local app loop.
+- Use `cargo run` for the backend; it requires a PostgreSQL `DATABASE_URL` and applies migrations. See the README for the frontend loop and scheduler opt-in.
 - Run the repo verification commands from the README before calling the build healthy.
 
 ## Known Risks

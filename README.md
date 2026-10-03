@@ -4,26 +4,26 @@
 
 > Knowledge bases decay silently. This catches the rot before users do.
 
-KB Freshness Detector continuously monitors Confluence knowledge base articles for staleness, broken links, visual drift in referenced screenshots, and unaddressed support tickets. Automated daily scans surface the highest-risk articles so documentation teams can prioritize updates rather than audit manually.
+KB Freshness Detector monitors Confluence knowledge base articles for staleness and broken links, with optional screenshot comparison and Jira ticket correlation. When background automation is enabled, daily freshness scans update the dashboard so documentation teams can prioritize updates rather than audit manually.
 
 ## Features
 
-- **Automated freshness tracking** — daily scans of Confluence spaces with per-article and global staleness thresholds (default 90 days)
-- **Broken link detection** — concurrent validation of all article links with redirect chain handling and SSL checks
-- **Visual drift detection** — weekly screenshots of referenced application UIs with hash-based comparison to catch interface changes
-- **Support ticket correlation** — Jaro-Winkler similarity and keyword extraction match open tickets to the articles that should address them
-- **Health dashboard** — article health scores, link validity rates, and freshness distributions at a glance
+- **Automated freshness tracking** — opt-in daily scans of Confluence spaces with per-article and global staleness thresholds (default 90 days)
+- **Broken link detection** — concurrent HTTP checks of absolute and root-relative article links, with HEAD-to-GET fallback
+- **Visual drift detection** — opt-in weekly screenshots of article URLs with hash-based comparison (requires the `screenshots` Cargo feature)
+- **Support ticket correlation** — Jaro-Winkler similarity and keyword extraction match Jira tickets updated in the last 30 days to article titles (requires the `tickets` Cargo feature)
+- **Health dashboard** — article health statuses, status counts, and scan results at a glance
 - **AI-powered suggestions** — optional Ollama integration generates update recommendations based on ticket patterns
-- **Production hardened** — comprehensive error handling, retry logic, configurable rate limiting
+- **Scan safeguards** — scheduled freshness-scan retries and configurable link-check concurrency
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 20.19+ (Vite 8 requirement)
+- Node.js 20.19+ on 20.x, 22.12+ on 22.x, or 24+ (locked Vite 8/Vitest 4 requirements)
 - Rust stable toolchain (`rustup`)
 - PostgreSQL for running the backend; `DATABASE_URL` points to a disposable development database
-- Python 3 for the standard-library Living Research fixture suite
+- Python 3.10+ for the standard-library Living Research fixture suite
 - Confluence API credentials only for explicitly requested provider scans
 - Ollama (optional, for AI suggestions)
 
@@ -67,7 +67,7 @@ Frontend checks are `npm --prefix frontend run test -- --run` (non-watch) and
 Rust formatting/checking is `cargo fmt --all -- --check` and `cargo check --locked`.
 
 The [canonical full gate](.codex/verify.commands) also includes Rust tests and
-performance baselines; inspect database-dependent/ignored tests and optional
+performance baselines; inspect database-dependent tests and optional
 screenshot/ticket feature prerequisites before selecting them. For UI changes,
 use synthetic dashboard responses in a local browser. Do not enable recurrence,
 use production databases, invoke Confluence/Notion/Jira/Ollama, or capture real
@@ -86,7 +86,7 @@ screenshots merely to verify documentation or local fixture behavior.
 
 ## Architecture
 
-The Rust backend drives all monitoring work: concurrent HTTP requests for link validation with configurable rate limiting, headless screenshot capture on a weekly schedule, and a fuzzy matching pipeline for ticket correlation. The health dashboard aggregates scan results into scores the documentation team can act on. AI suggestions run as a separate pass after correlation and never affect the deterministic health scores.
+The Rust backend drives all monitoring work: concurrent HTTP requests for link validation with configurable concurrency, headless capture of article URLs with the `screenshots` feature, and a fuzzy matching pipeline with the `tickets` feature. Daily freshness scans and weekly screenshot/ticket jobs require opt-in background automation. The health dashboard aggregates scan results into health statuses the documentation team can act on. AI suggestions run within ticket analysis after correlation and never affect the deterministic health scores.
 
 ## Living Research upgrade
 
