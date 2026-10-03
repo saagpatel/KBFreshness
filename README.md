@@ -33,7 +33,10 @@ KB Freshness Detector continuously monitors Confluence knowledge base articles f
 git clone https://github.com/saagpatel/KBFreshness
 cd KBFreshness
 npm --prefix frontend ci
+cargo metadata --locked --no-deps --format-version 1 >/dev/null
 ```
+
+The application commits `Cargo.lock` so Rust setup uses the reviewed dependency resolution. Keep it alongside `Cargo.toml`; do not remove it or regenerate it during routine Cloud setup. The metadata command checks the locked package graph without starting the backend or requiring a database.
 
 ### Usage
 
