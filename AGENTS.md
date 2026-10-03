@@ -4,13 +4,13 @@
 
 ## Communication Contract
 
-- Inherit global Codex communication and reporting rules from `/Users/d/.codex/AGENTS.override.md` and `/Users/d/.codex/policies/communication/BigPictureReportingV1.md`.
+- Apply the active session communication and reporting rules. On the owner's Mac, also follow `/Users/d/.codex/AGENTS.override.md` and `/Users/d/.codex/policies/communication/BigPictureReportingV1.md` when those files exist; they are not Cloud checkout prerequisites.
 - Repo-specific instructions below add project constraints only; do not restate global voice or status-reporting rules here.
 <!-- comm-contract:end -->
 
 ## Inherited Operating Rules
 
-- Inherit global git, review/fix, testing, docs, UI, security, skill-use, and reporting gates from `/Users/d/.codex/AGENTS.md` and active session instructions.
+- Follow the active session instructions. On the owner's Mac, also follow `/Users/d/.codex/AGENTS.md` when present; do not copy machine-private instructions into Cloud.
 - Use `.codex/verify.commands` and `.codex/scripts/run_verify_commands.sh` as this repo-local verification authority when present.
 - Add repo-specific constraints here only when this project has instructions that differ from global Codex defaults.
 
