@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 
+permissions:
+  contents: read
+
 jobs:
   enforce:
     # Dependabot lockfile bumps are their own rationale.
@@ -13,10 +16,10 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: tj-actions/changed-files@48d8f15b2aaa3d255ca5af3eba4870f807ce6b3c
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: tj-actions/changed-files@48d8f15b2aaa3d255ca5af3eba4870f807ce6b3c # v45.0.2
         id: changed
-      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         if: contains(steps.changed.outputs.all_changed_files, 'pnpm-lock.yaml') || contains(steps.changed.outputs.all_changed_files, 'package-lock.json') || contains(steps.changed.outputs.all_changed_files, 'yarn.lock')
         with:
           script: |
